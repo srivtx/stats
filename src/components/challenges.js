@@ -2,7 +2,7 @@
 import { C } from './palette.js';
 import { modulesData } from '../data/modulesData.js';
 import {
-  normalCdf, normalQuantile, tTwoTailedP, mulberry32, gaussian, mean, variance, pearson, median
+  normalCdf, normalQuantile, tTwoTailedP, betaInc, lnGamma, mulberry32, gaussian, mean, variance, pearson, median
 } from './statmath.js';
 /**
  * Interactive Statistical Challenges Laboratory.
@@ -12,16 +12,22 @@ import {
 const CATALOG = [
   { key: 'outlier', moduleId: 'module-1', label: 'Outlier Sabotage', icon: 'bar-chart-2', done: ['outlier_breakdown'] },
   { key: 'detective', moduleId: 'module-2', label: 'Distribution Detective', icon: 'search', done: ['detective_win'] },
+  { key: 'binomial', moduleId: 'module-2', label: 'Binomial Tail Guess', icon: 'dices', done: ['binom_tail'] },
   { key: 'bessel', moduleId: 'module-3', label: "Bessel's Divisor", icon: 'divide', done: ['bessel_predict'] },
   { key: 'clt', moduleId: 'module-4', label: 'CLT Normality Race', icon: 'shuffle', done: ['clt_master'] },
+  { key: 'bootstrap', moduleId: 'module-4', label: 'Bootstrap Standard Error', icon: 'refresh-cw', done: ['boot_se'] },
   { key: 'pvalue', moduleId: 'module-5', label: 'P-Value Estimator', icon: 'target', done: ['p_sniper', 'p_close'] },
   { key: 'matcher', moduleId: 'module-5', label: 'Test Matcher', icon: 'check-square', done: ['test_match'] },
+  { key: 'threshold', moduleId: 'module-5', label: 'Critical Threshold Finder', icon: 'ruler', done: ['threshold_find'] },
   { key: 'power', moduleId: 'module-6', label: 'Power Optimizer', icon: 'activity', done: ['power_optimal'] },
   { key: 'fdr', moduleId: 'module-6', label: 'FDR Controller', icon: 'filter', done: ['fdr_master'] },
+  { key: 'tradeoff', moduleId: 'module-6', label: 'Error Trade-off Slider', icon: 'blend', done: ['tradeoff_set'] },
   { key: 'qq', moduleId: 'module-7', label: 'Q-Q Plot Reader', icon: 'git-commit', done: ['qq_read'] },
   { key: 'correlation', moduleId: 'module-8', label: 'Correlation Guesser', icon: 'compass', done: ['corr_guess'] },
   { key: 'mle', moduleId: 'module-9', label: 'MLE Climber', icon: 'mountain', done: ['mle_summit'] },
+  { key: 'poisson', moduleId: 'module-9', label: 'Poisson Rate Climber', icon: 'bar-chart-big', done: ['poisson_peak'] },
   { key: 'ols', moduleId: 'module-10', label: 'OLS Line Fitter', icon: 'trending-up', done: ['ols_perfect', 'ols_good'] },
+  { key: 'anova', moduleId: 'module-10', label: 'ANOVA Group Judge', icon: 'microscope', done: ['anova_judge'] },
   { key: 'bayes', moduleId: 'module-11', label: 'Base Rate Bayes Lab', icon: 'layers', done: ['bayes_base_rate'] }
 ];
 
@@ -234,6 +240,24 @@ export class ChallengesLab {
         break;
       case 'ols':
         this.renderOLSChallenge(stage);
+        break;
+      case 'binomial':
+        this.renderBinomialChallenge(stage);
+        break;
+      case 'bootstrap':
+        this.renderBootstrapChallenge(stage);
+        break;
+      case 'threshold':
+        this.renderThresholdChallenge(stage);
+        break;
+      case 'tradeoff':
+        this.renderTradeoffChallenge(stage);
+        break;
+      case 'poisson':
+        this.renderPoissonChallenge(stage);
+        break;
+      case 'anova':
+        this.renderANOVAChallenge(stage);
         break;
       case 'bayes':
         this.renderBayesChallenge(stage);
@@ -2080,6 +2104,682 @@ export class ChallengesLab {
     stage.querySelector('#btn-next-bayes').addEventListener('click', () => {
       this.renderBayesChallenge(stage);
       this.refreshIcons();
+    });
+  }
+
+  // ============================================================
+  // MODULE 2: Binomial Tail Guess (P(X >= k) for X ~ Binomial(n, p))
+  // ============================================================
+  renderBinomialChallenge(stage) {
+    const n = 10;
+    const p = [0.2, 0.3, 0.4, 0.6, 0.7, 0.8][Math.floor(Math.random() * 6)];
+    const k = Math.round(n * p) + 1;
+    const pmfs = Array.from({ length: n + 1 }, (_, x) =>
+      Math.exp(lnGamma(n + 1) - lnGamma(x + 1) - lnGamma(n - x + 1) + x * Math.log(p) + (n - x) * Math.log(1 - p)));
+    const exact = pmfs.reduce((a, pv, x) => (x >= k ? a + pv : a), 0);
+
+    stage.innerHTML = `
+      <div class="ch-card">
+        <div class="ch-header-row">
+          <div>
+            <h3><i data-lucide="dices"></i> Binomial Tail Guess</h3>
+            <p>Each of n = ${n} independent trials succeeds with probability p = ${p}. Let X count the successes, so X ~ Binomial(${n}, ${p}) with mean np = ${(n * p).toFixed(1)}. Estimate the probability of at least ${k} successes, P(X ≥ ${k}). The distribution appears after you lock in your estimate.</p>
+          </div>
+          <span class="ch-badge">Discrete Distributions</span>
+        </div>
+
+        <div class="ch-body-grid">
+          <div class="canvas-wrap">
+            <canvas id="binom-canvas" width="600" height="320" class="ch-canvas"></canvas>
+          </div>
+          <div class="ch-controls-panel">
+            <div class="control-group">
+              <label>Your estimate of P(X ≥ ${k}): <span id="lbl-binom-guess" class="highlight-val">50%</span></label>
+              <input type="range" id="slider-binom-guess" min="0" max="100" step="1" value="50">
+            </div>
+            <button class="btn btn-primary" id="btn-submit-binom" style="width:100%;">
+              <i data-lucide="check"></i> Lock In & Reveal
+            </button>
+            <div id="binom-banner" class="ch-result-banner"></div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const canvas = stage.querySelector('#binom-canvas');
+    const ctx = canvas.getContext('2d');
+    const slider = stage.querySelector('#slider-binom-guess');
+    const lbl = stage.querySelector('#lbl-binom-guess');
+    const banner = stage.querySelector('#binom-banner');
+    const colors = this.getThemeColors();
+    const padL = 50, padR = 20, padT = 40, padB = 40;
+    const w = canvas.width - padL - padR;
+    const h = canvas.height - padT - padB;
+    const maxP = Math.max(...pmfs);
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = colors.muted;
+    ctx.font = '14px Inter, sans-serif';
+    ctx.fillText('Make your estimate to reveal the distribution.', padL, canvas.height / 2);
+
+    slider.addEventListener('input', () => {
+      lbl.textContent = `${slider.value}%`;
+    });
+
+    let answered = false;
+    stage.querySelector('#btn-submit-binom').addEventListener('click', () => {
+      if (answered) return;
+      answered = true;
+      const guess = parseFloat(slider.value) / 100;
+      const diff = Math.abs(guess - exact);
+      const bw = w / (n + 1);
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      pmfs.forEach((pv, x) => {
+        const bh = (pv / maxP) * h;
+        const bx = padL + x * bw + 4;
+        const by = canvas.height - padB - bh;
+        ctx.fillStyle = x >= k ? colors.success : colors.muted;
+        ctx.fillRect(bx, by, bw - 8, bh);
+        ctx.fillStyle = colors.muted;
+        ctx.font = '11px JetBrains Mono, monospace';
+        ctx.fillText(String(x), bx + (bw - 8) / 2 - 3, canvas.height - padB + 16);
+      });
+      ctx.fillStyle = colors.text;
+      ctx.font = '13px Inter, sans-serif';
+      ctx.fillText(`Green: P(X ≥ ${k}) = ${(exact * 100).toFixed(1)}%`, padL, padT - 14);
+
+      banner.className = 'ch-result-banner show';
+      if (diff <= 0.03) {
+        this.addScore('binom_tail', 40);
+        banner.classList.add('success');
+        banner.innerHTML = `<strong>BAM!</strong> The exact tail probability is ${(exact * 100).toFixed(1)}%. The green bars are the outcomes X = ${k} to ${n}, and adding their probabilities gives the answer. Your estimate was within 3 points. (+40 Points).`;
+      } else {
+        banner.classList.add('warn');
+        banner.innerHTML = `<strong>Off target:</strong> The exact value is ${(exact * 100).toFixed(1)}%, not ${(guess * 100).toFixed(0)}%. Sum the bars from X = ${k} upward. The bars drop off quickly on the right when p is small, and the mean np = ${(n * p).toFixed(1)} sits near the middle.`;
+      }
+    });
+  }
+
+  // ============================================================
+  // MODULE 4: Bootstrap Standard Error (resampling the sample)
+  // ============================================================
+  renderBootstrapChallenge(stage) {
+    const n = 25;
+    const sample = Array.from({ length: n }, () => 50 + 10 * gaussian());
+    const sampleSd = Math.sqrt(variance(sample, 1));
+    const theorySE = sampleSd / Math.sqrt(n);
+    const B = 2000;
+    const boot = [];
+    for (let b = 0; b < B; b++) {
+      let s = 0;
+      for (let i = 0; i < n; i++) s += sample[Math.floor(Math.random() * n)];
+      boot.push(s / n);
+    }
+    const bootSE = Math.sqrt(variance(boot, 1));
+
+    stage.innerHTML = `
+      <div class="ch-card">
+        <div class="ch-header-row">
+          <div>
+            <h3><i data-lucide="refresh-cw"></i> Bootstrap Standard Error</h3>
+            <p>You have one sample of n = ${n} measurements (dots below). You cannot repeat the study, so you resample: draw ${n} values from your sample <em>with replacement</em>, compute the mean, and repeat ${B.toLocaleString()} times. Estimate the standard error of the sample mean, which is the standard deviation of those resampled means.</p>
+          </div>
+          <span class="ch-badge">Resampling</span>
+        </div>
+
+        <div class="ch-body-grid">
+          <div class="canvas-wrap">
+            <canvas id="boot-canvas" width="600" height="320" class="ch-canvas"></canvas>
+          </div>
+          <div class="ch-controls-panel">
+            <div class="control-group">
+              <label>Your estimate of the standard error: <span id="lbl-boot-guess" class="highlight-val">2.0</span></label>
+              <input type="range" id="slider-boot-guess" min="0.2" max="5" step="0.1" value="2">
+            </div>
+            <button class="btn btn-primary" id="btn-submit-boot" style="width:100%;">
+              <i data-lucide="check"></i> Run the Bootstrap & Grade
+            </button>
+            <div id="boot-banner" class="ch-result-banner"></div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const canvas = stage.querySelector('#boot-canvas');
+    const ctx = canvas.getContext('2d');
+    const slider = stage.querySelector('#slider-boot-guess');
+    const lbl = stage.querySelector('#lbl-boot-guess');
+    const banner = stage.querySelector('#boot-banner');
+    const colors = this.getThemeColors();
+    const padL = 50, padR = 20, padT = 40, padB = 40;
+    const w = canvas.width - padL - padR;
+    const h = canvas.height - padT - padB;
+
+    const sampleX = v => padL + ((v - 25) / 50) * w;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = colors.grid;
+    ctx.beginPath();
+    ctx.moveTo(padL, canvas.height - padB);
+    ctx.lineTo(canvas.width - padR, canvas.height - padB);
+    ctx.stroke();
+    ctx.fillStyle = colors.text;
+    sample.forEach(v => {
+      ctx.beginPath();
+      ctx.arc(sampleX(v), canvas.height / 2, 5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.fillStyle = colors.muted;
+    ctx.font = '13px Inter, sans-serif';
+    ctx.fillText(`Your sample: n = ${n}, sample mean = ${mean(sample).toFixed(1)}`, padL, padT - 14);
+
+    slider.addEventListener('input', () => {
+      lbl.textContent = parseFloat(slider.value).toFixed(1);
+    });
+
+    let answered = false;
+    stage.querySelector('#btn-submit-boot').addEventListener('click', () => {
+      if (answered) return;
+      answered = true;
+      const guess = parseFloat(slider.value);
+      const rel = Math.abs(guess - bootSE) / bootSE;
+
+      const lo = Math.min(...boot);
+      const hi = Math.max(...boot);
+      const bins = 30;
+      const bwid = (hi - lo) / bins;
+      const counts = new Array(bins).fill(0);
+      boot.forEach(v => {
+        counts[Math.min(bins - 1, Math.floor((v - lo) / bwid))]++;
+      });
+      const maxC = Math.max(...counts);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = colors.text;
+      counts.forEach((c, i) => {
+        const bh = (c / maxC) * h;
+        ctx.fillRect(padL + (i * w) / bins + 1, canvas.height - padB - bh, w / bins - 2, bh);
+      });
+      ctx.strokeStyle = colors.grid;
+      ctx.beginPath();
+      ctx.moveTo(padL, canvas.height - padB);
+      ctx.lineTo(canvas.width - padR, canvas.height - padB);
+      ctx.stroke();
+      ctx.fillStyle = colors.muted;
+      ctx.font = '13px Inter, sans-serif';
+      ctx.fillText(`Bootstrap means: SD = ${bootSE.toFixed(2)}`, padL, padT - 14);
+
+      banner.className = 'ch-result-banner show';
+      const se = `Bootstrap SE = ${bootSE.toFixed(2)}, matching the formula s/√n = ${theorySE.toFixed(2)}.`;
+      if (rel <= 0.15) {
+        this.addScore('boot_se', 40);
+        banner.classList.add('success');
+        banner.innerHTML = `<strong>BAM!</strong> ${se} The resampling spread of the mean shows how much the mean would move from study to study. (+40 Points).`;
+      } else {
+        banner.classList.add('warn');
+        banner.innerHTML = `<strong>Off target:</strong> Your guess was ${guess.toFixed(1)}. ${se} The SE is the spread of the mean, not of the individual values, so it shrinks with √n.`;
+      }
+    });
+  }
+
+  // ============================================================
+  // MODULE 5: Critical Threshold Finder (Type I error of a coin test)
+  // ============================================================
+  renderThresholdChallenge(stage) {
+    const n = 100;
+    const pmfs = Array.from({ length: n + 1 }, (_, k) =>
+      Math.exp(lnGamma(n + 1) - lnGamma(k + 1) - lnGamma(n - k + 1) - n * Math.log(2)));
+    const alphaFor = c => pmfs.reduce((a, pv, k) => (Math.abs(k - 50) >= c ? a + pv : a), 0);
+    let best = 1;
+    while (alphaFor(best) > 0.05) best++;
+
+    stage.innerHTML = `
+      <div class="ch-card">
+        <div class="ch-header-row">
+          <div>
+            <h3><i data-lucide="ruler"></i> Critical Threshold Finder</h3>
+            <p>A fair coin is flipped n = ${n} times. The null hypothesis says the coin is fair, so the number of heads X has mean 50. Your rule rejects the null when |X − 50| ≥ c. Choose the <strong>smallest</strong> c whose Type I error α (the chance of rejecting a true null) is at most 0.05. Red bars are outcomes that would lead to rejection.</p>
+          </div>
+          <span class="ch-badge">Type I Error</span>
+        </div>
+
+        <div class="ch-body-grid">
+          <div class="canvas-wrap">
+            <canvas id="threshold-canvas" width="600" height="320" class="ch-canvas"></canvas>
+          </div>
+          <div class="ch-controls-panel">
+            <div class="control-group">
+              <label>Cutoff c: <span id="lbl-threshold-c" class="highlight-val">10</span></label>
+              <input type="range" id="slider-threshold-c" min="1" max="30" step="1" value="10">
+            </div>
+            <div class="ch-metric-box">
+              <div class="metric-label">Type I error α for this rule</div>
+              <div class="metric-val" id="val-threshold-alpha">--</div>
+            </div>
+            <button class="btn btn-primary" id="btn-submit-threshold" style="width:100%;">
+              <i data-lucide="check"></i> Submit Cutoff
+            </button>
+            <div id="threshold-banner" class="ch-result-banner"></div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const canvas = stage.querySelector('#threshold-canvas');
+    const ctx = canvas.getContext('2d');
+    const slider = stage.querySelector('#slider-threshold-c');
+    const lbl = stage.querySelector('#lbl-threshold-c');
+    const valAlpha = stage.querySelector('#val-threshold-alpha');
+    const banner = stage.querySelector('#threshold-banner');
+    const colors = this.getThemeColors();
+    const padL = 40, padR = 20, padT = 30, padB = 40;
+    const w = canvas.width - padL - padR;
+    const h = canvas.height - padT - padB;
+    const lo = 30, hi = 70;
+    const bw = w / (hi - lo + 1);
+    const maxP = Math.max(...pmfs);
+
+    const draw = () => {
+      const c = parseInt(slider.value);
+      lbl.textContent = c;
+      const a = alphaFor(c);
+      valAlpha.textContent = `${(a * 100).toFixed(2)}%`;
+      valAlpha.style.color = a <= 0.05 ? colors.success : colors.error;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let k = lo; k <= hi; k++) {
+        const bh = (pmfs[k] / maxP) * h;
+        const bx = padL + (k - lo) * bw + 1;
+        ctx.fillStyle = Math.abs(k - 50) >= c ? colors.error : colors.muted;
+        ctx.fillRect(bx, canvas.height - padB - bh, bw - 2, bh);
+      }
+      ctx.strokeStyle = colors.grid;
+      ctx.beginPath();
+      ctx.moveTo(padL, canvas.height - padB);
+      ctx.lineTo(canvas.width - padR, canvas.height - padB);
+      ctx.stroke();
+      ctx.fillStyle = colors.muted;
+      ctx.font = '11px JetBrains Mono, monospace';
+      [30, 40, 50, 60, 70].forEach(k => {
+        ctx.fillText(String(k), padL + (k - lo) * bw - 4, canvas.height - padB + 16);
+      });
+      ctx.fillStyle = colors.text;
+      ctx.font = '13px Inter, sans-serif';
+      ctx.fillText(`Reject when X ≤ ${50 - c} or X ≥ ${50 + c}`, padL, padT - 10);
+    };
+
+    slider.addEventListener('input', draw);
+    draw();
+
+    stage.querySelector('#btn-submit-threshold').addEventListener('click', () => {
+      const c = parseInt(slider.value);
+      const a = alphaFor(c);
+      banner.className = 'ch-result-banner show';
+      if (c === best) {
+        this.addScore('threshold_find', 40);
+        banner.classList.add('success');
+        banner.innerHTML = `<strong>BAM!</strong> c = ${c} is the smallest cutoff with α = ${(a * 100).toFixed(2)}% ≤ 5%. A smaller c would push α above 5%. (+40 Points).`;
+      } else if (a > 0.05) {
+        banner.classList.add('warn');
+        banner.innerHTML = `<strong>Too permissive:</strong> With c = ${c}, α = ${(a * 100).toFixed(2)}%, which is above 5%. Increase c.`;
+      } else {
+        banner.classList.add('warn');
+        banner.innerHTML = `<strong>Too conservative:</strong> With c = ${c}, α = ${(a * 100).toFixed(2)}%. That passes, but c = ${best} also passes and is the smallest such cutoff, so it rejects more often when the coin really is biased.`;
+      }
+    });
+  }
+
+  // ============================================================
+  // MODULE 6: Error Trade-off Slider (alpha vs power for one cutoff)
+  // ============================================================
+  renderTradeoffChallenge(stage) {
+    const delta = [1.5, 2, 2.5][Math.floor(Math.random() * 3)];
+    const cBest = normalQuantile(0.95);
+    const alphaOf = c => 1 - normalCdf(c);
+    const powerOf = c => 1 - normalCdf(c - delta);
+
+    stage.innerHTML = `
+      <div class="ch-card">
+        <div class="ch-header-row">
+          <div>
+            <h3><i data-lucide="blend"></i> Error Trade-off Slider</h3>
+            <p>A test statistic is Normal(0, 1) when the null is true and Normal(${delta}, 1) when the alternative is true. You reject when the statistic exceeds the cutoff c. Move c to keep the Type I error α at or below 0.05 while making the power (the chance of detecting the alternative) as large as possible.</p>
+          </div>
+          <span class="ch-badge">α vs Power</span>
+        </div>
+
+        <div class="ch-body-grid">
+          <div class="canvas-wrap">
+            <canvas id="tradeoff-canvas" width="600" height="320" class="ch-canvas"></canvas>
+          </div>
+          <div class="ch-controls-panel">
+            <div class="control-group">
+              <label>Cutoff c: <span id="lbl-tradeoff-c" class="highlight-val">1.00</span></label>
+              <input type="range" id="slider-tradeoff-c" min="-1" max="4" step="0.01" value="1">
+            </div>
+            <div class="ch-stats-summary">
+              <div><strong>Type I error α:</strong> <span id="val-tradeoff-alpha">--</span></div>
+              <div><strong>Power 1 − β:</strong> <span id="val-tradeoff-power">--</span></div>
+            </div>
+            <button class="btn btn-primary" id="btn-submit-tradeoff" style="width:100%;">
+              <i data-lucide="check"></i> Submit Cutoff
+            </button>
+            <div id="tradeoff-banner" class="ch-result-banner"></div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const canvas = stage.querySelector('#tradeoff-canvas');
+    const ctx = canvas.getContext('2d');
+    const slider = stage.querySelector('#slider-tradeoff-c');
+    const lbl = stage.querySelector('#lbl-tradeoff-c');
+    const valA = stage.querySelector('#val-tradeoff-alpha');
+    const valP = stage.querySelector('#val-tradeoff-power');
+    const banner = stage.querySelector('#tradeoff-banner');
+    const colors = this.getThemeColors();
+    const padL = 40, padR = 20, padT = 30, padB = 40;
+    const w = canvas.width - padL - padR;
+    const h = canvas.height - padT - padB;
+    const xMin = -3.5, xMax = delta + 3.5;
+    const mapX = x => padL + ((x - xMin) / (xMax - xMin)) * w;
+    const phi = x => Math.exp(-0.5 * x * x) / Math.sqrt(2 * Math.PI);
+    const mapY = y => canvas.height - padB - (y / phi(0)) * h * 0.95;
+
+    const curve = (shift, color, fillFrom) => {
+      ctx.beginPath();
+      for (let x = xMin; x <= xMax + 1e-9; x += 0.02) {
+        const px = mapX(x);
+        const py = mapY(phi(x - shift));
+        if (x === xMin) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      if (fillFrom !== null) {
+        ctx.beginPath();
+        ctx.moveTo(mapX(fillFrom), canvas.height - padB);
+        for (let x = fillFrom; x <= xMax + 1e-9; x += 0.02) ctx.lineTo(mapX(x), mapY(phi(x - shift)));
+        ctx.lineTo(mapX(xMax), canvas.height - padB);
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 0.35;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    };
+
+    const draw = () => {
+      const c = parseFloat(slider.value);
+      lbl.textContent = c.toFixed(2);
+      const a = alphaOf(c);
+      const pw = powerOf(c);
+      valA.textContent = `${(a * 100).toFixed(1)}%`;
+      valA.style.color = a <= 0.05 ? colors.success : colors.error;
+      valP.textContent = `${(pw * 100).toFixed(1)}%`;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = colors.grid;
+      ctx.beginPath();
+      ctx.moveTo(padL, canvas.height - padB);
+      ctx.lineTo(canvas.width - padR, canvas.height - padB);
+      ctx.stroke();
+      curve(0, colors.muted, c);
+      curve(delta, colors.success, c);
+      curve(0, colors.muted, null);
+      curve(delta, colors.success, null);
+      ctx.strokeStyle = colors.text;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath();
+      ctx.moveTo(mapX(c), padT);
+      ctx.lineTo(mapX(c), canvas.height - padB);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = colors.text;
+      ctx.font = '12px Inter, sans-serif';
+      ctx.fillText('grey: null (α = shaded area right of c)   green: alternative (power = shaded area)', padL, padT - 10);
+    };
+
+    slider.addEventListener('input', draw);
+    draw();
+
+    stage.querySelector('#btn-submit-tradeoff').addEventListener('click', () => {
+      const c = parseFloat(slider.value);
+      banner.className = 'ch-result-banner show';
+      if (Math.abs(c - cBest) <= 0.02) {
+        this.addScore('tradeoff_set', 40);
+        banner.classList.add('success');
+        banner.innerHTML = `<strong>BAM!</strong> c = ${cBest.toFixed(3)} = Φ⁻¹(0.95) gives α = 5% exactly. Any lower cutoff raises α above 5%, and any higher cutoff lowers power. Power here is ${(powerOf(cBest) * 100).toFixed(1)}%. (+40 Points).`;
+      } else if (c < cBest) {
+        banner.classList.add('warn');
+        banner.innerHTML = `<strong>α too large:</strong> α = ${(alphaOf(c) * 100).toFixed(1)}% is above 5%. Lowering the cutoff gains power but breaks the Type I error budget.`;
+      } else {
+        banner.classList.add('warn');
+        banner.innerHTML = `<strong>Power wasted:</strong> α = ${(alphaOf(c) * 100).toFixed(1)}% is below the budget, but power is only ${(powerOf(c) * 100).toFixed(1)}%. The cutoff c = ${cBest.toFixed(3)} keeps α = 5% and gives more power.`;
+      }
+    });
+  }
+
+  // ============================================================
+  // MODULE 9: Poisson Rate Climber (MLE of an event rate)
+  // ============================================================
+  renderPoissonChallenge(stage) {
+    const lamTrue = 2 + Math.random() * 6;
+    const drawPoisson = () => {
+      const L = Math.exp(-lamTrue);
+      let k = 0;
+      let p = 1;
+      do {
+        k++;
+        p *= Math.random();
+      } while (p > L);
+      return k - 1;
+    };
+    const xs = Array.from({ length: 12 }, drawPoisson);
+    const lamHat = mean(xs);
+    const logLik = lam => xs.reduce((a, x) => a + x * Math.log(lam) - lam - lnGamma(x + 1), 0);
+
+    stage.innerHTML = `
+      <div class="ch-card">
+        <div class="ch-header-row">
+          <div>
+            <h3><i data-lucide="bar-chart-big"></i> Poisson Rate Climber</h3>
+            <p>Twelve counts were recorded: <strong>${xs.join(', ')}</strong>. Each count comes from a Poisson(λ) process with the same unknown rate λ. The log-likelihood is ℓ(λ) = Σ [xᵢ ln λ − λ − ln xᵢ!]. Adjust λ to climb to the value that makes ℓ(λ) as large as possible.</p>
+          </div>
+          <span class="ch-badge">Maximum Likelihood</span>
+        </div>
+
+        <div class="ch-body-grid">
+          <div class="canvas-wrap">
+            <canvas id="poisson-canvas" width="600" height="320" class="ch-canvas"></canvas>
+          </div>
+          <div class="ch-controls-panel">
+            <div class="control-group">
+              <label>Rate λ: <span id="lbl-poisson-lam" class="highlight-val">5.00</span></label>
+              <input type="range" id="slider-poisson-lam" min="0.5" max="12" step="0.05" value="5">
+            </div>
+            <div class="ch-metric-box">
+              <div class="metric-label">Log-likelihood ℓ(λ) at your λ</div>
+              <div class="metric-val" id="val-poisson-ll">--</div>
+            </div>
+            <button class="btn btn-primary" id="btn-submit-poisson" style="width:100%;">
+              <i data-lucide="check"></i> Lock In λ & Reveal the Curve
+            </button>
+            <div id="poisson-banner" class="ch-result-banner"></div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const canvas = stage.querySelector('#poisson-canvas');
+    const ctx = canvas.getContext('2d');
+    const slider = stage.querySelector('#slider-poisson-lam');
+    const lbl = stage.querySelector('#lbl-poisson-lam');
+    const valLL = stage.querySelector('#val-poisson-ll');
+    const banner = stage.querySelector('#poisson-banner');
+    const colors = this.getThemeColors();
+    const padL = 60, padR = 20, padT = 30, padB = 40;
+    const w = canvas.width - padL - padR;
+    const h = canvas.height - padT - padB;
+
+    ctx.fillStyle = colors.muted;
+    ctx.font = '14px Inter, sans-serif';
+    ctx.fillText('Lock in your λ to reveal the log-likelihood curve.', padL, canvas.height / 2);
+
+    slider.addEventListener('input', () => {
+      const lam = parseFloat(slider.value);
+      lbl.textContent = lam.toFixed(2);
+      valLL.textContent = logLik(lam).toFixed(2);
+    });
+    valLL.textContent = logLik(parseFloat(slider.value)).toFixed(2);
+
+    let answered = false;
+    stage.querySelector('#btn-submit-poisson').addEventListener('click', () => {
+      if (answered) return;
+      answered = true;
+      const lam = parseFloat(slider.value);
+      const grid = [];
+      for (let l = 0.5; l <= 12; l += 0.05) grid.push([l, logLik(l)]);
+      const lls = grid.map(g => g[1]);
+      const minLL = Math.min(...lls);
+      const maxLL = Math.max(...lls);
+      const mapX = l => padL + ((l - 0.5) / 11.5) * w;
+      const mapY = v => padT + ((maxLL - v) / (maxLL - minLL)) * h;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = colors.text;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      grid.forEach(([l, v], i) => {
+        if (i === 0) ctx.moveTo(mapX(l), mapY(v)); else ctx.lineTo(mapX(l), mapY(v));
+      });
+      ctx.stroke();
+      ctx.strokeStyle = colors.success;
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath();
+      ctx.moveTo(mapX(lamHat), padT);
+      ctx.lineTo(mapX(lamHat), canvas.height - padB);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = colors.error;
+      ctx.beginPath();
+      ctx.arc(mapX(lam), mapY(logLik(lam)), 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = colors.muted;
+      ctx.font = '12px Inter, sans-serif';
+      ctx.fillText('ℓ(λ) against λ. Dashed line: the peak at λ̂ = x̄', padL, padT - 10);
+
+      banner.className = 'ch-result-banner show';
+      if (Math.abs(lam - lamHat) <= 0.3) {
+        this.addScore('poisson_peak', 40);
+        banner.classList.add('success');
+        banner.innerHTML = `<strong>BAM!</strong> The peak is at λ̂ = x̄ = ${lamHat.toFixed(2)}. Setting the derivative Σxᵢ/λ − n = 0 gives the sample mean, so the MLE of a Poisson rate is simply the average count. (+40 Points).`;
+      } else {
+        banner.classList.add('warn');
+        banner.innerHTML = `<strong>Not at the peak:</strong> Your λ = ${lam.toFixed(2)}. The likelihood peaks at λ̂ = x̄ = ${lamHat.toFixed(2)}. Set the derivative Σxᵢ/λ − n to zero to see why.`;
+      }
+    });
+  }
+
+  // ============================================================
+  // MODULE 10: ANOVA Group Judge (is the difference real?)
+  // ============================================================
+  renderANOVAChallenge(stage) {
+    const real = Math.random() < 0.5;
+    const means = real ? [50, 50, 58] : [50, 50, 50];
+    const sd = 8;
+    const nPer = 8;
+    const groups = means.map(m => Array.from({ length: nPer }, () => m + sd * gaussian()));
+    const grand = mean(groups.flat());
+    const ssb = groups.reduce((a, g) => a + nPer * (mean(g) - grand) ** 2, 0);
+    const ssw = groups.reduce((a, g) => a + g.reduce((b, x) => b + (x - mean(g)) ** 2, 0), 0);
+    const d1 = means.length - 1;
+    const d2 = means.length * nPer - means.length;
+    const F = (ssb / d1) / (ssw / d2);
+    const pVal = betaInc(d2 / (d2 + d1 * F), d2 / 2, d1 / 2);
+
+    stage.innerHTML = `
+      <div class="ch-card">
+        <div class="ch-header-row">
+          <div>
+            <h3><i data-lucide="microscope"></i> ANOVA Group Judge</h3>
+            <p>Three treatment groups of ${nPer} subjects each were measured. Look at the spread of the dots within each group and the gap between the group means. Judge whether the group means differ <strong>significantly</strong> at α = 0.05 under a one-way ANOVA F test. The F statistic and exact p-value appear after you answer.</p>
+          </div>
+          <span class="ch-badge">One-Way ANOVA</span>
+        </div>
+
+        <div class="ch-body-grid">
+          <div class="canvas-wrap">
+            <canvas id="anova-canvas" width="600" height="320" class="ch-canvas"></canvas>
+          </div>
+          <div class="ch-controls-panel">
+            <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:8px;">Are the group means significantly different?</label>
+            <div class="detective-options">
+              <button class="btn btn-secondary btn-anova" data-ans="yes" style="width:100%; margin-bottom:8px; justify-content:flex-start;">Yes, significant (p &lt; 0.05)</button>
+              <button class="btn btn-secondary btn-anova" data-ans="no" style="width:100%; margin-bottom:8px; justify-content:flex-start;">No, not significant (p ≥ 0.05)</button>
+            </div>
+            <div id="anova-banner" class="ch-result-banner"></div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const canvas = stage.querySelector('#anova-canvas');
+    const ctx = canvas.getContext('2d');
+    const banner = stage.querySelector('#anova-banner');
+    const colors = this.getThemeColors();
+    const padL = 50, padR = 20, padT = 30, padB = 40;
+    const w = canvas.width - padL - padR;
+    const h = canvas.height - padT - padB;
+    const mapY = v => padT + ((80 - v) / 50) * h;
+    const mapX = gi => padL + ((gi + 0.5) / 3) * w;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = colors.grid;
+    ctx.beginPath();
+    ctx.moveTo(padL, padT);
+    ctx.lineTo(padL, canvas.height - padB);
+    ctx.stroke();
+    groups.forEach((g, gi) => {
+      ctx.fillStyle = colors.text;
+      g.forEach((v, j) => {
+        ctx.beginPath();
+        ctx.arc(mapX(gi) + (j - nPer / 2) * 9, mapY(v), 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.strokeStyle = colors.success;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(mapX(gi) - 70, mapY(mean(g)));
+      ctx.lineTo(mapX(gi) + 70, mapY(mean(g)));
+      ctx.stroke();
+      ctx.fillStyle = colors.muted;
+      ctx.font = '12px Inter, sans-serif';
+      ctx.fillText(`Group ${gi + 1}`, mapX(gi) - 26, canvas.height - padB + 18);
+    });
+    ctx.fillStyle = colors.muted;
+    ctx.font = '12px Inter, sans-serif';
+    ctx.fillText('Green lines: group means', padL, padT - 10);
+
+    let answered = false;
+    stage.querySelectorAll('.btn-anova').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (answered) return;
+        answered = true;
+        stage.querySelectorAll('.btn-anova').forEach(b => { b.disabled = true; });
+        const says = btn.dataset.ans === 'yes';
+        const sig = pVal < 0.05;
+        const summary = `F(${d1}, ${d2}) = ${F.toFixed(2)}, exact p = ${pVal.toFixed(3)}.`;
+        banner.className = 'ch-result-banner show';
+        if (says === sig) {
+          this.addScore('anova_judge', 40);
+          banner.classList.add('success');
+          banner.innerHTML = `<strong>BAM!</strong> ${summary} ${sig ? 'The between-group spread is large relative to the within-group spread.' : 'The gap between means is within the noise of the within-group spread.'} (+40 Points).`;
+        } else {
+          banner.classList.add('warn');
+          banner.innerHTML = `<strong>Not quite.</strong> ${summary} The F ratio compares between-group variance to within-group variance. Judge the gap against the scatter inside each group.`;
+        }
+      });
     });
   }
 
