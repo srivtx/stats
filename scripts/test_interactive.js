@@ -140,16 +140,16 @@ print(f"Clean Mean: {np.mean(clean_data):.1f}")`;
   assert(resOutliers.output.includes('Clean Median: 225.0'), 'Clean median must be 225.0');
   console.log('✓ Pyodide Local Statistical Engine evaluates means, medians, OLS regressions, and Monte Carlo trials with exact math.');
 
-  // 7. Verify 8 Interactive Challenges in ChallengesLab
+  // 7. Verify every module-specific challenge in ChallengesLab
   const lab = new ChallengesLab(mockContainer);
-  const challengeTypes = ['ols', 'detective', 'pvalue', 'matcher', 'power', 'clt', 'mle', 'fdr'];
+  const challengeTypes = ['outlier', 'detective', 'binomial', 'bessel', 'clt', 'bootstrap', 'pvalue', 'matcher', 'threshold', 'power', 'fdr', 'tradeoff', 'qq', 'correlation', 'mle', 'poisson', 'ols', 'anova', 'bayes'];
   challengeTypes.forEach(ch => {
     lab.currentChallenge = ch;
     lab.renderStage();
   });
   assert(lab.getRankTitle(0) === '🌱 Statistical Novice', 'Initial rank must be Novice');
   assert(lab.getRankTitle(650).includes('Grandmaster'), 'Top score rank must be Grandmaster');
-  console.log('✓ ChallengesLab supports all 8 first-principles statistical challenges with rank progression.');
+  console.log(`✓ ChallengesLab renders all ${challengeTypes.length} module-specific challenges with rank progression.`);
 
   // 8. Verify First-Principles Theory Module Derivations
   const expectedModules = [
@@ -160,19 +160,21 @@ print(f"Clean Mean: {np.mean(clean_data):.1f}")`;
     const deriv = moduleDerivations[modId];
     assert(deriv, `Module ${modId} missing derivation`);
     assert(deriv.title && deriv.title.length > 5, `Module ${modId} title invalid`);
-    assert(Array.isArray(deriv.steps) && deriv.steps.length === 4, `Module ${modId} must have exactly 4 derivation steps`);
+    assert(Array.isArray(deriv.steps) && deriv.steps.length >= 7, `Module ${modId} must have at least 7 foundation steps`);
     deriv.steps.forEach((s, idx) => {
-      assert(s.step === idx + 1, `Step index mismatch in ${modId}`);
-      assert(s.title && s.content, `Incomplete step in ${modId}`);
+      const text = [].concat(s.content, s.example).join(' ');
+      assert(s.title && text.length > 0, `Incomplete step ${idx + 1} in ${modId}`);
       // Verify math parsing works on the derivation content
       try {
-        katex.renderToString(s.content.match(/\$(.+?)\$/)?.[1] || 'E[X] = \\mu', { throwOnError: true });
+        for (const m of text.matchAll(/\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$/g)) {
+          katex.renderToString(m[1] ?? m[2], { throwOnError: true, displayMode: m[1] !== undefined });
+        }
       } catch (kErr) {
-        assert.fail(`KaTeX parse error in ${modId} step ${s.step}: ${kErr.message}`);
+        assert.fail(`KaTeX parse error in ${modId} step ${idx + 1}: ${kErr.message}`);
       }
     });
   });
-  console.log('✓ All 11 modules have comprehensive 4-step axiomatic derivations verified with KaTeX.');
+  console.log('✓ All 11 modules have ground-up foundations with worked examples, checked for KaTeX parsing.');
 
   console.log('--- ALL INTERACTIVE VERIFICATION TESTS PASSED! ---');
 })();

@@ -11,14 +11,14 @@ A comprehensive, first-principles interactive learning platform built for the **
 Every single video is paired with:
 1. **Embedded YouTube Video Player** (with direct playlist links and timestamp shortcuts).
 2. **"BAM!" Core Intuition**: Josh Starmer's signature visual mental model.
-3. **First-Principles Derivation (per video)**: Starting axioms, a numbered step-by-step derivation, a boxed result, and a section on where the assumptions break. Each module also has a module-level foundation.
+3. **First-Principles Derivation (per video)**: Starting axioms, a numbered step-by-step derivation, a boxed result, and a section on where the assumptions break. Each module also opens with a ground-up foundation: it starts from tiny numeric examples and builds to the full theory, with a worked example in every step.
 4. **Formal KaTeX LaTeX Formulations**: Typeset equations for probability densities, expectations, variances, and estimators.
 5. **Step-by-Step Worked Numerical Walkthrough**: Exact numbers illustrating how the math works out by hand.
 6. **3D Interactive WebGL Spatial Studios**: Rotating 3D Gaussian bells, multiple regression planes, loss paraboloids, and maximum likelihood manifolds built from scratch with Three.js.
 7. **2D Simulation Labs**: Monte Carlo simulations of the Central Limit Theorem, Bessel's correction, statistical power, Q-Q plots, and bootstrapping.
-8. **Python in the Browser & R Code**: Run Python in a Pyodide (WebAssembly) sandbox or a fast local engine, with preset experiments. R snippets are copy-ready.
+8. **Python in the Browser & R Code**: Run Python in a Pyodide (WebAssembly CPython) sandbox or a built-in local engine, with preset experiments. Python and R code is syntax-highlighted, and R snippets are copy-ready.
 9. **Knowledge Check Quizzes**: Eight questions per video (three core plus five derivation-focused), with explanations of misconceptions and traps.
-10. **Statistical Challenges**: Eight gamified labs (least squares fitting, distribution detective, p-value estimation, test matching, power, CLT, and more) that award mastery points and a certificate.
+10. **Statistical Challenges**: 19 gamified labs, at least one for every module, with a module picker and an overall progress bar. Examples include outlier sabotage, Bessel's divisor, bootstrap standard errors, Q-Q plot reading, ANOVA, and base-rate Bayes. Each lab awards mastery points and unlocks a certificate.
 11. **Printable Cheatsheet**: Quick-reference guide covering decision matrices and formulas.
 
 ### Themes, Navigation & Accessibility
@@ -26,6 +26,7 @@ Every single video is paired with:
 - **Tabs**: Overview, Theory, 3D Studio, 2D Lab, Code Lab, Challenges, and Quiz. The tab bar is an ARIA tablist: use the arrow keys, Home, and End to move between tabs.
 - **Video navigation**: ← and → move to the previous or next video (not while typing in a field).
 - **Screen readers and keyboard**: labelled controls, a skip link to the lesson content, visible focus rings, and reduced-motion support.
+- **Installable app**: a web app manifest, app icons, and an offline cache of the app shell. Once installed, the lessons open without a connection; the Pyodide runtime and YouTube embeds still need one.
 
 ---
 
@@ -74,14 +75,24 @@ Each video opens the closest of five 3D scenes. The tab says "Closest 3D scene f
 ## 🗂️ Content & Data Layout
 
 - `src/data/playlistData.js`: the 62 videos, with BAM intuition, summary, formulas, worked example, pitfalls, Python and R code, and three core quiz questions.
-- `src/data/theoryDerivations.js`: the module-level foundation derivations.
+- `src/data/foundations/module-N.js`: the 11 module foundations (title, summary, and 7–8 steps, each with paragraphs and a worked numeric example). `src/data/theoryDerivations.js` gathers them into `moduleDerivations`.
 - `src/data/deepContent/module-N.js`: per-video derivations (axioms, numbered steps, result, where assumptions break) and five extra quiz questions. `index.js` merges them by video index.
 - `scripts/validate_deep_content.mjs`: checks every module's structure, the quiz answer positions, duplicate questions, and that every formula renders with KaTeX.
+- `scripts/validate_foundations.mjs`: checks the module foundations: schema, KaTeX, word counts, and that every worked example contains numbers.
 
 ```bash
 node scripts/validate_deep_content.mjs      # all modules
 node scripts/validate_deep_content.mjs 10   # one module
+node scripts/validate_foundations.mjs       # all module foundations
+npm test                                    # curriculum, interactive, and challenge checks
 ```
+
+### Code layout (interactive parts)
+- `src/components/challenges.js`: the 19 challenges and their module catalog.
+- `src/components/statmath.js`: exact helpers used by the challenges (normal CDF and quantile, Student-t and F p-values, Pearson r, seeded random numbers).
+- `src/components/pyodideRunner.js`: the Python editor, the local engine, and the Pyodide runtime switch.
+- `src/components/codeHighlight.js`: the small Python and R highlighter used in the code views.
+- `public/sw.js`, `public/manifest.webmanifest`, `public/icons/`: offline caching and installability. The service worker only registers in production builds.
 
 ---
 
@@ -121,14 +132,22 @@ The compiled static bundle is located in the `dist/` directory and can be hosted
 
 ## 🛠️ Tech Stack & Architecture
 
-- **Frontend Runtime**: Native Modern ES Modules (ES2022)
+- **Frontend Runtime**: Native Modern ES Modules (ES2022), installable as a PWA with a service worker
 - **Build Engine**: [Vite 8](https://vitejs.dev/) (lightning-fast bundling, zero runtime server overhead)
-- **In-browser Python**: [Pyodide](https://pyodide.org/) (WebAssembly CPython) plus a local fast engine
+- **In-browser Python**: [Pyodide](https://pyodide.org/) (WebAssembly CPython) plus a built-in local engine for the lesson presets
 - **3D Graphics Engine**: [Three.js](https://threejs.org/) + OrbitControls (WebGL 2.0)
 - **Mathematical Typesetting**: [KaTeX](https://katex.org/) (fast browser-side LaTeX rendering)
 - **UI Icons**: [Lucide](https://lucide.dev/)
 - **State Management**: Zero-dependency reactive controller with `localStorage` persistence
 - **CI/CD**: GitHub Actions workflow for automated deployment to GitHub Pages
+
+---
+
+## ⚠️ Known Limitations
+
+- **The local Python engine is not CPython.** It runs the lesson presets and simple statements (assignments, `np` summaries, `print`). Anything else needs the Pyodide option, which downloads the Python runtime on first use.
+- **Some per-video derivations are written at an intermediate level.** The module foundations start from the ground up, but the per-video derivations are being reviewed for beginner depth.
+- **Charts are drawn on canvas**, so most of their content is not available to screen readers yet. Text summaries for each chart are still to be added.
 
 ---
 
