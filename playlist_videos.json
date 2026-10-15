@@ -1,0 +1,374 @@
+[
+  {
+    "index": 1,
+    "id": "qBigTkBLU6g",
+    "title": "StatQuest: Histograms, Clearly Explained",
+    "duration": ""
+  },
+  {
+    "index": 2,
+    "id": "oI3hZJqXJuc",
+    "title": "The Main Ideas behind Probability Distributions",
+    "duration": ""
+  },
+  {
+    "index": 3,
+    "id": "rzFX5NWojp0",
+    "title": "The Normal Distribution, Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 4,
+    "id": "-14BImgVENA",
+    "title": "The mean, the median, and the mode.",
+    "duration": ""
+  },
+  {
+    "index": 5,
+    "id": "wtLQUjfomig",
+    "title": "The Exponential Distribution",
+    "duration": ""
+  },
+  {
+    "index": 6,
+    "id": "vikkiwjQqfU",
+    "title": "Population and Estimated Parameters, Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 7,
+    "id": "SzZ6GpcfoQY",
+    "title": "Calculating the Mean, Variance and Standard Deviation, Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 8,
+    "id": "yQhTtdq_y9M",
+    "title": "What is a (mathematical) model?",
+    "duration": ""
+  },
+  {
+    "index": 9,
+    "id": "0oc49DyA3hU",
+    "title": "Hypothesis Testing and The Null Hypothesis, Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 10,
+    "id": "5koKb5B_YWo",
+    "title": "Alternative Hypotheses: Main Ideas!!!",
+    "duration": ""
+  },
+  {
+    "index": 11,
+    "id": "vemZtEM63GY",
+    "title": "p-values: What they are and how to interpret them",
+    "duration": ""
+  },
+  {
+    "index": 12,
+    "id": "udyAvvaMjfM",
+    "title": "Fisher's Exact Test and the Hypergeometric Distribution",
+    "duration": ""
+  },
+  {
+    "index": 13,
+    "id": "JQc3yx0-Q9E",
+    "title": "How to calculate p-values",
+    "duration": ""
+  },
+  {
+    "index": 14,
+    "id": "HDCOUXE3HMM",
+    "title": "p-hacking: What it is and how to avoid it!",
+    "duration": ""
+  },
+  {
+    "index": 15,
+    "id": "L3nlGfSyHV0",
+    "title": "False Discovery Rates, FDR, clearly explained",
+    "duration": ""
+  },
+  {
+    "index": 16,
+    "id": "Rsc5znwR5FA",
+    "title": "Statistical Power, Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 17,
+    "id": "VX_M3tIyiYk",
+    "title": "Power Analysis, Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 18,
+    "id": "qtaqvPAeEJY",
+    "title": "Covariance, Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 19,
+    "id": "xZ_z8KWkhXE",
+    "title": "Pearson's Correlation, Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 20,
+    "id": "_IgyaD7vOOA",
+    "title": "Conditional Probabilities, Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 21,
+    "id": "9wCnvr7Xw4E",
+    "title": "Bayes' Theorem, Clearly Explained!!!!",
+    "duration": ""
+  },
+  {
+    "index": 22,
+    "id": "KLs_7b7SKi4",
+    "title": "Expected Values, Main Ideas!!!",
+    "duration": ""
+  },
+  {
+    "index": 23,
+    "id": "OSPr6G6Ka-U",
+    "title": "Expected Values for Continuous Variables!!!",
+    "duration": ""
+  },
+  {
+    "index": 24,
+    "id": "J8jNoF-K8E8",
+    "title": "The Binomial Distribution and Test, Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 25,
+    "id": "YAlJCEDH2uY",
+    "title": "The Central Limit Theorem, Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 26,
+    "id": "Exk0OoRG0PQ",
+    "title": "The Difference Between Technical and Biological Replicates",
+    "duration": ""
+  },
+  {
+    "index": 27,
+    "id": "67zCIqdeXpo",
+    "title": "Sample Size and Effective Sample Size, Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 28,
+    "id": "A82brFpdr9g",
+    "title": "Standard Deviation vs Standard Error, Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 29,
+    "id": "XNgt7F6FqDU",
+    "title": "The standard error, Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 30,
+    "id": "Xz0x-8-cgaQ",
+    "title": "Bootstrapping Main Ideas!!!",
+    "duration": ""
+  },
+  {
+    "index": 31,
+    "id": "N4ZQQqyIf6k",
+    "title": "Using Bootstrapping to Calculate p-values!!!",
+    "duration": ""
+  },
+  {
+    "index": 32,
+    "id": "RiEZ_hEf96A",
+    "title": "Bar Charts Are Better than Pie Charts",
+    "duration": ""
+  },
+  {
+    "index": 33,
+    "id": "fHLhBnmwUM0",
+    "title": "Boxplots are Awesome!!!",
+    "duration": ""
+  },
+  {
+    "index": 34,
+    "id": "VSi0Z04fWj0",
+    "title": "Logs (logarithms), Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 35,
+    "id": "TqOeMYtOc1w",
+    "title": "Confidence Intervals, Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 36,
+    "id": "2AQKmw14mHM",
+    "title": "R-squared, Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 37,
+    "id": "aFDOzpTeg0s",
+    "title": "The Essence of Linear Regression!!!",
+    "duration": ""
+  },
+  {
+    "index": 38,
+    "id": "PaFPbb66DxQ",
+    "title": "The Main Ideas of Fitting a Line to Data (The Main Ideas of Least Squares and Linear Regression.)",
+    "duration": ""
+  },
+  {
+    "index": 39,
+    "id": "Vf7oJ6z2LCc",
+    "title": "Lowess and Loess, Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 40,
+    "id": "7ArmBVF2dCs",
+    "title": "Linear Regression, Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 41,
+    "id": "u1cc1r_Y7M0",
+    "title": "Linear Regression in R, Step-by-Step",
+    "duration": ""
+  },
+  {
+    "index": 42,
+    "id": "zITIFTsivN8",
+    "title": "Multiple Regression, Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 43,
+    "id": "hokALdIst8k",
+    "title": "Multiple Regression in R, Step-by-Step!!!",
+    "duration": ""
+  },
+  {
+    "index": 44,
+    "id": "NF5_btOaCig",
+    "title": "Using Linear Models for t-tests and ANOVA, Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 45,
+    "id": "CqLGvwi-5Pc",
+    "title": "Design Matrices For Linear Models, Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 46,
+    "id": "XLCWeSVzHUU",
+    "title": "Sampling from a Distribution, Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 47,
+    "id": "i4iUvjsGCMc",
+    "title": "Bam!!! Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 48,
+    "id": "KEofcJ1tfkI",
+    "title": "StatQuickie: Thresholds for Significance",
+    "duration": ""
+  },
+  {
+    "index": 49,
+    "id": "nnBJeb_I-q8",
+    "title": "StatQuickie: Which t test to use",
+    "duration": ""
+  },
+  {
+    "index": 50,
+    "id": "bsZGt-caXO4",
+    "title": "StatQuest:  One or Two Tailed P-Values",
+    "duration": ""
+  },
+  {
+    "index": 51,
+    "id": "IFKQLDmRK0Y",
+    "title": "Quantiles and Percentiles, Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 52,
+    "id": "okjYjClSjOg",
+    "title": "Quantile-Quantile Plots (QQ plots), Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 53,
+    "id": "ecjN6Xpv6SE",
+    "title": "Quantile Normalization, Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 54,
+    "id": "pYxNSUDSFH4",
+    "title": "In Statistics, Probability is not Likelihood.",
+    "duration": ""
+  },
+  {
+    "index": 55,
+    "id": "XepXtl9YKwc",
+    "title": "Maximum Likelihood, clearly explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 56,
+    "id": "p3T-_LMrvBc",
+    "title": "Maximum Likelihood for the Exponential Distribution, Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 57,
+    "id": "4KKV9yZCoM4",
+    "title": "Maximum Likelihood for the Binomial Distribution, Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 58,
+    "id": "Dn6b9fCIUpM",
+    "title": "Maximum Likelihood For the Normal Distribution, step-by-step!!!",
+    "duration": ""
+  },
+  {
+    "index": 59,
+    "id": "ARfXDSkQf1Y",
+    "title": "Odds and Log(Odds), Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 60,
+    "id": "8nm0G-1uJzA",
+    "title": "Odds Ratios and Log(Odds Ratios), Clearly Explained!!!",
+    "duration": ""
+  },
+  {
+    "index": 61,
+    "id": "6fWk_lQ_K5A",
+    "title": "Frank Starmer Clearly Explained (How my pop influenced StatQuest!!!)",
+    "duration": ""
+  },
+  {
+    "index": 62,
+    "id": "sHRBg6BhKjI",
+    "title": "Why Dividing By N Underestimates the Variance",
+    "duration": ""
+  }
+]
