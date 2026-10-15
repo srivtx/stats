@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node scripts/test_curriculum.js"
+    "test": "node scripts/test_curriculum.js && node scripts/test_interactive.js"
   },
   "keywords": [],
   "author": "",

@@ -2,10 +2,10 @@
 /**
  * Three.js 3D Interactive Graphics Engine for StatQuest Website.
  * Supports:
- *  1. normal3d: Bivariate Normal Bell Surface with slicing plane & correlation
+ *  1. normal3d: Bivariate Normal Bell Surface with 1D slice curve & correlation morphing
  *  2. regression3d: 3D Multiple Regression Plane with residual drop lines & Loss Paraboloid
  *  3. mle3d: 3D Log-Likelihood surface with interactive parameter climbing
- *  4. cov3d: 3D Covariance Ellipsoid and rotating point cloud
+ *  4. cov3d: 3D Covariance Ellipsoid and smooth-morphing correlated point cloud
  */
 
 import * as THREE from 'three';
@@ -22,63 +22,116 @@ export class ThreeStudio {
     this.currentMode = null;
     this.activeObjects = [];
     this.resizeObserver = null;
+    this.isDestroyed = false;
+
+    // Pre-computed deterministic standard normal base points for cov3d morphing
+    this.covBasePoints = [];
+    let seed = 42;
+    const rnd = () => {
+      seed = (seed * 9301 + 49297) % 233280;
+      return seed / 233280;
+    };
+    for (let i = 0; i < 450; i++) {
+      const u1 = rnd() + 1e-9, u2 = rnd();
+      const z1 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+      const z2 = Math.sqrt(-2 * Math.log(u1)) * Math.sin(2 * Math.PI * u2);
+      const u3 = rnd() + 1e-9, u4 = rnd();
+      const z3 = Math.sqrt(-2 * Math.log(u3)) * Math.cos(2 * Math.PI * u4);
+      this.covBasePoints.push({ z1, z2, z3 });
+    }
 
     this.init();
   }
 
+  isWebGLAvailable() {
+    try {
+      const canvas = document.createElement('canvas');
+      return !!(window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
+    } catch (e) {
+      return false;
+    }
+  }
+
+  showWebGLFallback() {
+    this.container.innerHTML = `
+      <div class="webgl-fallback-container">
+        <div style="font-size: 2.2rem; margin-bottom: 12px;">📐</div>
+        <h3 style="color: #38bdf8; margin-bottom: 8px;">WebGL 3D Acceleration Unavailable</h3>
+        <p style="color: #94a3b8; max-width: 460px; margin: 0 auto 12px; font-size: 0.88rem;">
+          WebGL context creation is disabled or unsupported in this browser environment.
+        </p>
+        <p style="color: #64748b; font-size: 0.8rem;">
+          Switch to the <strong>2D Simulation Lab</strong> or <strong>First-Principles Theory</strong> tabs for complete interactive exploration!
+        </p>
+      </div>
+    `;
+  }
+
   init() {
+    if (!this.isWebGLAvailable()) {
+      this.showWebGLFallback();
+      return;
+    }
+
     this.container.innerHTML = '';
     const width = this.container.clientWidth || 800;
-    const height = this.container.clientHeight || 500;
+    const height = this.container.clientHeight || 520;
 
-    // Scene
-    this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0a0f1d);
+    try {
+      // Scene
+      this.scene = new THREE.Scene();
+      this.scene.background = new THREE.Color(0x0a0f1d);
 
-    // Camera
-    this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-    this.camera.position.set(12, 10, 14);
+      // Camera
+      this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+      this.camera.position.set(12, 10, 14);
 
-    // Renderer
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    this.renderer.setSize(width, height);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.shadowMap.enabled = true;
-    this.container.appendChild(this.renderer.domElement);
+      // Renderer
+      this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+      this.renderer.setSize(width, height);
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      this.renderer.shadowMap.enabled = true;
+      this.container.appendChild(this.renderer.domElement);
 
-    // Controls
-    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.05;
-    this.controls.maxPolarAngle = Math.PI / 2 + 0.1;
+      // Controls
+      this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+      this.controls.enableDamping = true;
+      this.controls.dampingFactor = 0.05;
+      this.controls.maxPolarAngle = Math.PI / 2 + 0.1;
 
-    // Lights
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-    this.scene.add(ambientLight);
+      // Lights
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
+      this.scene.add(ambientLight);
 
-    const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.9);
-    dirLight1.position.set(15, 25, 20);
-    this.scene.add(dirLight1);
+      const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.9);
+      dirLight1.position.set(15, 25, 20);
+      this.scene.add(dirLight1);
 
-    const dirLight2 = new THREE.DirectionalLight(0x38bdf8, 0.4);
-    dirLight2.position.set(-15, -10, -15);
-    this.scene.add(dirLight2);
+      const dirLight2 = new THREE.DirectionalLight(0x38bdf8, 0.45);
+      dirLight2.position.set(-15, -10, -15);
+      this.scene.add(dirLight2);
 
-    // Grid floor
-    const grid = new THREE.GridHelper(24, 24, 0x1e293b, 0x0f172a);
-    grid.position.y = -0.01;
-    this.scene.add(grid);
+      // Grid floor
+      const grid = new THREE.GridHelper(24, 24, 0x1e293b, 0x0f172a);
+      grid.position.y = -0.01;
+      this.scene.add(grid);
 
-    // Handle Resize
-    this.resizeObserver = new ResizeObserver(() => this.onResize());
-    this.resizeObserver.observe(this.container);
+      // Handle Resize
+      if (typeof ResizeObserver !== 'undefined') {
+        this.resizeObserver = new ResizeObserver(() => this.onResize());
+        this.resizeObserver.observe(this.container);
+      }
 
-    // Start loop
-    this.animate();
+      // Start loop
+      this.animate();
+    } catch (err) {
+      console.warn('ThreeStudio WebGL initialization error:', err);
+      this.showWebGLFallback();
+    }
   }
 
   onResize() {
-    if (!this.container || !this.renderer || !this.camera) return;
+    if (this.isDestroyed || !this.container || !this.renderer || !this.camera) return;
     const width = this.container.clientWidth;
     const height = this.container.clientHeight;
     if (width === 0 || height === 0) return;
@@ -89,6 +142,7 @@ export class ThreeStudio {
   }
 
   animate() {
+    if (this.isDestroyed) return;
     this.animId = requestAnimationFrame(() => this.animate());
     if (this.controls) this.controls.update();
     if (this.renderer && this.scene && this.camera) {
@@ -97,6 +151,7 @@ export class ThreeStudio {
   }
 
   clearActiveObjects() {
+    if (!this.scene) return;
     this.activeObjects.forEach(obj => {
       this.scene.remove(obj);
       if (obj.geometry) obj.geometry.dispose();
@@ -109,23 +164,40 @@ export class ThreeStudio {
   }
 
   destroy() {
-    if (this.animId) cancelAnimationFrame(this.animId);
-    if (this.resizeObserver) this.resizeObserver.disconnect();
-    this.clearActiveObjects();
-    if (this.renderer && this.renderer.domElement) {
-      this.renderer.dispose();
-      this.container.innerHTML = '';
+    this.isDestroyed = true;
+    if (this.animId) {
+      cancelAnimationFrame(this.animId);
+      this.animId = null;
     }
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
+    if (this.controls) {
+      this.controls.dispose();
+      this.controls = null;
+    }
+    this.clearActiveObjects();
+    if (this.renderer) {
+      this.renderer.dispose();
+      if (this.renderer.domElement && this.renderer.domElement.parentNode) {
+        this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+      }
+      this.renderer = null;
+    }
+    this.scene = null;
+    this.camera = null;
   }
 
   // ==========================================
   // MODE 1: 3D Bivariate Gaussian Bell Surface
   // ==========================================
   renderNormal3D(params = { muX: 0, muY: 0, sigmaX: 2.0, sigmaY: 2.0, rho: 0.0, slicePos: null }) {
+    if (!this.scene) return;
     this.currentMode = 'normal3d';
     this.clearActiveObjects();
 
-    const { muX, muY, sigmaX, sigmaY, rho, slicePos } = params;
+    const { muX = 0, muY = 0, sigmaX = 2.0, sigmaY = 2.0, rho = 0.0, slicePos = null } = params;
     const size = 16;
     const segments = 80;
     const geom = new THREE.PlaneGeometry(size, size, segments, segments);
@@ -143,8 +215,6 @@ export class ThreeStudio {
     const oneMinusRho2 = Math.max(0.01, 1 - rho * rho);
     const normFactor = 1 / (2 * Math.PI * sigmaX * sigmaY * Math.sqrt(oneMinusRho2));
 
-    let maxHeight = 0;
-
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i);
       const z = pos.getZ(i);
@@ -154,10 +224,8 @@ export class ThreeStudio {
 
       const exponent = -1 / (2 * oneMinusRho2) * (dx * dx - 2 * rho * dx * dz + dz * dz);
       const density = normFactor * Math.exp(exponent);
-      const y = density * 18; // scale height for visual clarity
+      const y = density * 18;
       pos.setY(i, y);
-
-      if (y > maxHeight) maxHeight = y;
 
       // Color mapping
       const t = Math.min(1.0, y / 3.5);
@@ -200,9 +268,9 @@ export class ThreeStudio {
     this.scene.add(wireMesh);
     this.activeObjects.push(wireMesh);
 
-    // Interactive Slicing Plane if active
+    // Interactive Slicing Plane & 1D Cross-Section Curve if active
     if (slicePos !== null && slicePos !== undefined) {
-      const sliceGeom = new THREE.PlaneGeometry(size, 6);
+      const sliceGeom = new THREE.PlaneGeometry(size, 7);
       const sliceMat = new THREE.MeshBasicMaterial({
         color: 0xec4899,
         side: THREE.DoubleSide,
@@ -210,10 +278,27 @@ export class ThreeStudio {
         opacity: 0.35
       });
       const sliceMesh = new THREE.Mesh(sliceGeom, sliceMat);
-      sliceMesh.position.set(slicePos, 3, 0);
+      sliceMesh.position.set(slicePos, 3.5, 0);
       sliceMesh.rotateY(Math.PI / 2);
       this.scene.add(sliceMesh);
       this.activeObjects.push(sliceMesh);
+
+      // 1D Gaussian cross-section glowing curve along the slice plane
+      const curvePoints = [];
+      const zSteps = 70;
+      for (let j = 0; j <= zSteps; j++) {
+        const z = -size / 2 + (j / zSteps) * size;
+        const dx = (slicePos - muX) / sigmaX;
+        const dz = (z - muY) / sigmaY;
+        const exponent = -1 / (2 * oneMinusRho2) * (dx * dx - 2 * rho * dx * dz + dz * dz);
+        const y = normFactor * Math.exp(exponent) * 18;
+        curvePoints.push(new THREE.Vector3(slicePos, y + 0.08, z));
+      }
+      const curveGeom = new THREE.BufferGeometry().setFromPoints(curvePoints);
+      const curveMat = new THREE.LineBasicMaterial({ color: 0xf43f5e, linewidth: 4 });
+      const curveLine = new THREE.Line(curveGeom, curveMat);
+      this.scene.add(curveLine);
+      this.activeObjects.push(curveLine);
     }
   }
 
@@ -221,10 +306,11 @@ export class ThreeStudio {
   // MODE 2: 3D Multiple Linear Regression & Loss Paraboloid
   // ==========================================
   renderRegression3D(params = { beta0: 2, beta1: 1.2, beta2: -0.8, showResiduals: true, showLossBowl: false }) {
+    if (!this.scene) return;
     this.currentMode = 'regression3d';
     this.clearActiveObjects();
 
-    const { beta0, beta1, beta2, showResiduals, showLossBowl } = params;
+    const { beta0 = 2, beta1 = 1.2, beta2 = -0.8, showResiduals = true, showLossBowl = false } = params;
 
     if (showLossBowl) {
       // 3D Loss Bowl (Paraboloid) SSR(b1, b2)
@@ -240,7 +326,7 @@ export class ThreeStudio {
       for (let i = 0; i < pos.count; i++) {
         const b1 = pos.getX(i) / 2;
         const b2 = pos.getZ(i) / 2;
-        // Quadratic loss
+        // Quadratic loss bowl
         const ssr = 1.5 * (b1 - trueB1) * (b1 - trueB1) + 1.2 * (b2 - trueB2) * (b2 - trueB2);
         const y = Math.min(10, ssr * 0.8);
         pos.setY(i, y);
@@ -263,10 +349,16 @@ export class ThreeStudio {
       const ballGeom = new THREE.SphereGeometry(0.35, 16, 16);
       const ballMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x38bdf8 });
       const ball = new THREE.Mesh(ballGeom, ballMat);
-      const curLoss = 1.5 * (beta1 - trueB1)**2 + 1.2 * (beta2 - trueB2)**2;
+      const curLoss = 1.5 * (beta1 - trueB1) ** 2 + 1.2 * (beta2 - trueB2) ** 2;
       ball.position.set(beta1 * 2, Math.min(10, curLoss * 0.8) + 0.35, beta2 * 2);
       this.scene.add(ball);
       this.activeObjects.push(ball);
+
+      // Wireframe overlay on bowl
+      const wireMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.1 });
+      const wireMesh = new THREE.Mesh(bowlGeom, wireMat);
+      this.scene.add(wireMesh);
+      this.activeObjects.push(wireMesh);
 
       return;
     }
@@ -354,10 +446,11 @@ export class ThreeStudio {
   // MODE 3: 3D Maximum Likelihood Estimation Surface
   // ==========================================
   renderMLE3D(params = { candidateMu: 0, candidateSigma: 1.5, trueMu: 0, trueSigma: 1.5 }) {
+    if (!this.scene) return;
     this.currentMode = 'mle3d';
     this.clearActiveObjects();
 
-    const { candidateMu, candidateSigma } = params;
+    const { candidateMu = 0, candidateSigma = 1.5 } = params;
     const size = 12;
     const segs = 60;
     const geom = new THREE.PlaneGeometry(size, size, segs, segs);
@@ -429,13 +522,13 @@ export class ThreeStudio {
   // MODE 4: 3D Covariance Ellipsoid & Point Cloud
   // ==========================================
   renderCovariance3D(params = { rhoXY: 0.7, rhoXZ: 0.3, rhoYZ: 0.2, scale: 1.0 }) {
+    if (!this.scene) return;
     this.currentMode = 'cov3d';
     this.clearActiveObjects();
 
-    const { rhoXY, rhoXZ, rhoYZ } = params;
+    const { rhoXY = 0.7, rhoXZ = 0.3, rhoYZ = 0.2 } = params;
 
-    // Generate correlated 3D cloud
-    const count = 400;
+    const count = this.covBasePoints.length;
     const geom = new THREE.BufferGeometry();
     const positions = new Float32Array(count * 3);
 
@@ -447,14 +540,9 @@ export class ThreeStudio {
     const l32 = (rhoYZ - l31 * l21) / l22;
     const l33 = Math.sqrt(Math.max(0.01, 1 - l31 * l31 - l32 * l32));
 
+    // Transform deterministic base points smoothly without jitter
     for (let i = 0; i < count; i++) {
-      // Box-Muller normal draws
-      const u1 = Math.random(), u2 = Math.random(), u3 = Math.random(), u4 = Math.random();
-      const z1 = Math.sqrt(-2 * Math.log(u1 + 1e-9)) * Math.cos(2 * Math.PI * u2);
-      const z2 = Math.sqrt(-2 * Math.log(u1 + 1e-9)) * Math.sin(2 * Math.PI * u2);
-      const z3 = Math.sqrt(-2 * Math.log(u3 + 1e-9)) * Math.cos(2 * Math.PI * u4);
-
-      // Correlate: X = L * Z
+      const { z1, z2, z3 } = this.covBasePoints[i];
       const x = (l11 * z1) * 2.5;
       const y = (l21 * z1 + l22 * z2) * 2.5;
       const z = (l31 * z1 + l32 * z2 + l33 * z3) * 2.5;
@@ -467,7 +555,7 @@ export class ThreeStudio {
     geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     const ptMat = new THREE.PointsMaterial({
       color: 0x38bdf8,
-      size: 0.25,
+      size: 0.28,
       transparent: true,
       opacity: 0.85
     });

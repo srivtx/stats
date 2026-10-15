@@ -1,29 +1,33 @@
 // src/components/videoPlayer.js
 /**
- * Responsive YouTube Player and Navigation Component.
+ * Responsive YouTube Player and Navigation Component with Offline Fallback.
  */
 
 export function renderVideoPlayer(container, video) {
+  const thumbUrl = `https://img.youtube.com/vi/${video.id}/hqdefault.jpg`;
+
   container.innerHTML = `
     <div class="video-player-card">
-      <div class="video-embed-wrapper">
+      <div class="video-embed-wrapper" id="embed-wrap-${video.id}">
         <iframe
+          id="yt-iframe-${video.id}"
           src="${video.embedUrl}"
           title="${video.title}"
           frameborder="0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowfullscreen
+          loading="lazy"
         ></iframe>
       </div>
       <div class="video-meta-bar">
         <div class="video-meta-left">
           <span class="badge badge-primary">#${video.index} of 62</span>
           <span class="badge badge-category">${video.category}</span>
-          <span class="video-duration"><i data-feather="clock"></i> ${video.duration}</span>
+          <span class="video-duration"><i data-lucide="clock"></i> ${video.duration || 'StatQuest'}</span>
         </div>
         <div class="video-meta-right">
-          <a href="${video.youtubeUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-ghost btn-sm">
-            Watch on YouTube <i data-feather="external-link"></i>
+          <a href="${video.youtubeUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-ghost btn-sm" title="Watch directly on YouTube">
+            Watch on YouTube <i data-lucide="external-link"></i>
           </a>
         </div>
       </div>

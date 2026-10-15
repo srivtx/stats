@@ -19,8 +19,15 @@ export function renderQuiz(container, questions, videoId, onComplete = null) {
   container.innerHTML = `
     <div class="quiz-container">
       <div class="quiz-header">
-        <h3><i data-feather="check-circle"></i> Knowledge Check: Test Your Intuition</h3>
-        <span class="quiz-status-badge">Concept Mastery</span>
+        <div class="quiz-header-left">
+          <h3><i data-lucide="check-circle"></i> Knowledge Check: Test Your Intuition</h3>
+          <span class="quiz-status-badge">Concept Mastery</span>
+        </div>
+        <div class="quiz-header-right">
+          <button class="btn btn-ghost btn-sm" id="btn-reset-quiz" title="Reset this quiz to try again">
+            <i data-lucide="rotate-ccw"></i> Reset Quiz
+          </button>
+        </div>
       </div>
       <div class="quiz-questions-list">
         ${questions.map((q, qIdx) => {
@@ -54,6 +61,17 @@ export function renderQuiz(container, questions, videoId, onComplete = null) {
       </div>
     </div>
   `;
+
+  // Reset quiz button
+  const resetBtn = container.querySelector('#btn-reset-quiz');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      const allProgress = JSON.parse(localStorage.getItem('statquest_quiz_progress') || '{}');
+      delete allProgress[videoId];
+      localStorage.setItem('statquest_quiz_progress', JSON.stringify(allProgress));
+      renderQuiz(container, questions, videoId, onComplete);
+    });
+  }
 
   // Attach click handlers
   const questionCards = container.querySelectorAll('.quiz-question-card');

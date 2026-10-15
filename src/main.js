@@ -46,9 +46,7 @@ class StatQuestApp {
   // Parse inline math $...$ in markdown text
   renderTextWithMath(text) {
     if (!text) return '';
-    // Replace $$...$$ with display math
     let formatted = text.replace(/\$\$(.+?)\$\$/g, (m, tex) => this.renderMath(tex, true));
-    // Replace $...$ with inline math
     formatted = formatted.replace(/\$(.+?)\$/g, (m, tex) => this.renderMath(tex, false));
     return formatted;
   }
@@ -57,6 +55,9 @@ class StatQuestApp {
     const appEl = document.getElementById('app');
     appEl.innerHTML = `
       <div class="app-layout">
+        <!-- Mobile Sidebar Backdrop Overlay -->
+        <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
         <!-- Sidebar Navigation -->
         <aside class="sidebar" id="sidebar">
           <div class="sidebar-header">
@@ -163,7 +164,6 @@ class StatQuestApp {
     const query = this.searchQuery.toLowerCase().trim();
 
     nav.innerHTML = this.modules.map(mod => {
-      // Find matching videos for this module
       const moduleVideos = this.playlist.filter(v => v.moduleId === mod.id);
       const filteredVideos = moduleVideos.filter(v => {
         if (!query) return true;
@@ -177,7 +177,7 @@ class StatQuestApp {
 
       if (query && filteredVideos.length === 0) return '';
 
-      const isOpen = query || moduleVideos.some(v => v.index === this.currentIndex);
+      const isOpen = Boolean(query) || moduleVideos.some(v => v.index === this.currentIndex);
 
       return `
         <div class="module-group ${isOpen ? 'open' : ''}" data-modid="${mod.id}">
@@ -227,6 +227,14 @@ class StatQuestApp {
       });
     });
 
+    // Auto-scroll active item into view
+    setTimeout(() => {
+      const activeEl = nav.querySelector('.video-nav-item.active');
+      if (activeEl) {
+        activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }, 50);
+
     this.refreshIcons();
   }
 
@@ -251,11 +259,38 @@ class StatQuestApp {
       });
     });
 
-    // Mobile menu toggle
+    // Mobile menu toggle & backdrop
     const menuBtn = document.getElementById('menu-toggle');
     const sidebar = document.getElementById('sidebar');
+    const backdrop = document.getElementById('sidebar-backdrop');
+
     menuBtn.addEventListener('click', () => {
       sidebar.classList.toggle('mobile-open');
+      backdrop.classList.toggle('active');
+    });
+
+    backdrop.addEventListener('click', () => {
+      sidebar.classList.remove('mobile-open');
+      backdrop.classList.remove('active');
+    });
+
+    // Close mobile menu on item click
+    document.addEventListener('click', (e) => {
+      const isNav = e.target.closest('.video-nav-item') || e.target.closest('#btn-open-cheatsheet');
+      if (isNav && window.innerWidth <= 900) {
+        sidebar.classList.remove('mobile-open');
+        backdrop.classList.remove('active');
+      }
+    });
+
+    // Keyboard navigation (ArrowLeft = prev, ArrowRight = next)
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+      if (e.key === 'ArrowLeft' && this.currentIndex > 1) {
+        window.location.hash = `#video-${this.currentIndex - 1}`;
+      } else if (e.key === 'ArrowRight' && this.currentIndex < 62) {
+        window.location.hash = `#video-${this.currentIndex + 1}`;
+      }
     });
 
     // Top Header Complete Button
@@ -272,6 +307,11 @@ class StatQuestApp {
 
   handleRoute() {
     const hash = window.location.hash;
+    if (hash === '#cheatsheet') {
+      this.openCheatsheet();
+      return;
+    }
+
     const match = hash.match(/#video-(\d+)/);
     if (match) {
       const idx = parseInt(match[1]);
@@ -285,6 +325,9 @@ class StatQuestApp {
   renderCurrentVideo() {
     const video = this.playlist.find(v => v.index === this.currentIndex);
     if (!video) return;
+
+    // Ensure tabs are visible if returning from cheatsheet
+    document.getElementById('view-tabs').style.display = 'flex';
 
     // Update Header
     document.getElementById('header-video-title').textContent = `#${video.index}. ${video.title}`;
@@ -338,6 +381,40 @@ class StatQuestApp {
     if (label) label.textContent = `${pct}% (${count}/${total})`;
   }
 
+  renderLessonFooter(container) {
+    const prev = this.playlist.find(v => v.index === this.currentIndex - 1);
+    const next = this.playlist.find(v => v.index === this.currentIndex + 1);
+
+    const footer = document.createElement('div');
+    footer.className = 'lesson-nav-footer';
+    footer.innerHTML = `
+      <div class="lesson-nav-left">
+        ${prev ? `
+          <a href="#video-${prev.index}" class="btn btn-secondary btn-nav-prev">
+            <i data-lucide="arrow-left"></i> Previous: #${prev.index} ${prev.shortTitle}
+          </a>
+        ` : `<div></div>`}
+      </div>
+      <div class="lesson-nav-right">
+        ${next ? `
+          <a href="#video-${next.index}" class="btn btn-primary btn-nav-next">
+            Next: #${next.index} ${next.shortTitle} <i data-lucide="arrow-right"></i>
+          </a>
+        ` : `
+          <button class="btn btn-primary" id="btn-finish-cheatsheet">
+            Finish Course & Review Cheatsheet <i data-lucide="award"></i>
+          </button>
+        `}
+      </div>
+    `;
+    container.appendChild(footer);
+
+    const finishBtn = footer.querySelector('#btn-finish-cheatsheet');
+    if (finishBtn) {
+      finishBtn.addEventListener('click', () => this.openCheatsheet());
+    }
+  }
+
   renderActiveTabContent() {
     const container = document.getElementById('content-body');
     const video = this.playlist.find(v => v.index === this.currentIndex);
@@ -376,6 +453,9 @@ class StatQuestApp {
         break;
     }
 
+    // Append Previous & Next Lesson Navigation Footer
+    this.renderLessonFooter(container);
+
     this.refreshIcons();
   }
 
@@ -406,8 +486,8 @@ class StatQuestApp {
 
       <div class="section-card">
         <h3><i data-lucide="compass"></i> Why This Matters</h3>
-        <p>${this.renderTextWithMath(video.firstPrinciples.slice(0, 300))}...</p>
-        <button class="btn btn-secondary btn-sm" id="btn-jump-theory">
+        <p>${this.renderTextWithMath(video.firstPrinciples.slice(0, 320))}...</p>
+        <button class="btn btn-secondary btn-sm" id="btn-jump-theory" style="margin-top: 10px;">
           Read Complete First-Principles Mathematical Derivation →
         </button>
       </div>
@@ -482,7 +562,9 @@ class StatQuestApp {
 
     // Decide initial 3D mode
     let defaultMode = 'normal3d';
-    if (['regression3d', 'r_squared', 'regression_intro', 'least_squares_line', 'multiple_r', 'linear_models_anova'].includes(video.interactiveType)) {
+    if (['least_squares_line'].includes(video.interactiveType)) {
+      defaultMode = 'lossBowl';
+    } else if (['regression3d', 'r_squared', 'regression_intro', 'multiple_r', 'linear_models_anova'].includes(video.interactiveType)) {
       defaultMode = 'regression3d';
     } else if (['mle3d', 'mle_exp', 'mle_binom', 'mle_norm'].includes(video.interactiveType)) {
       defaultMode = 'mle3d';
@@ -589,24 +671,35 @@ class StatQuestApp {
             <input type="range" id="slider-b1" min="-1.0" max="3.0" value="1.2" step="0.1">
           </div>
           <div class="control-group">
+            <label>Candidate \\(\\beta_2\\): <span id="val-b2" class="highlight-val">-0.8</span></label>
+            <input type="range" id="slider-b2" min="-2.0" max="1.0" value="-0.8" step="0.1">
+          </div>
+          <div class="control-group">
             <button id="btn-ols-solve" class="btn btn-primary btn-sm">Solve Global Minimum</button>
           </div>
         `;
         const sB1 = dynamicControls.querySelector('#slider-b1');
+        const sB2 = dynamicControls.querySelector('#slider-b2');
         const vB1 = dynamicControls.querySelector('#val-b1');
+        const vB2 = dynamicControls.querySelector('#val-b2');
         const btnSolve = dynamicControls.querySelector('#btn-ols-solve');
 
-        const refreshLoss = (b1Val) => {
+        const refreshLoss = () => {
+          const b1Val = parseFloat(sB1.value);
+          const b2Val = parseFloat(sB2.value);
           vB1.textContent = b1Val.toFixed(1);
-          this.threeStudio.renderRegression3D({ beta0: 2.0, beta1: b1Val, beta2: -0.8, showResiduals: false, showLossBowl: true });
+          vB2.textContent = b2Val.toFixed(1);
+          this.threeStudio.renderRegression3D({ beta0: 2.0, beta1: b1Val, beta2: b2Val, showResiduals: false, showLossBowl: true });
         };
 
-        sB1.addEventListener('input', () => refreshLoss(parseFloat(sB1.value)));
+        sB1.addEventListener('input', refreshLoss);
+        sB2.addEventListener('input', refreshLoss);
         btnSolve.addEventListener('click', () => {
           sB1.value = 1.2;
-          refreshLoss(1.2);
+          sB2.value = -0.8;
+          refreshLoss();
         });
-        refreshLoss(parseFloat(sB1.value));
+        refreshLoss();
 
       } else if (mode === 'mle3d') {
         dynamicControls.innerHTML = `
@@ -736,7 +829,6 @@ class StatQuestApp {
     container.appendChild(wrap);
     renderQuiz(wrap, video.quiz, video.id, (qIdx, isCorrect) => {
       if (isCorrect) {
-        // If all questions answered, auto-mark completed!
         this.completedVideos.add(video.index);
         localStorage.setItem('statquest_completed_videos', JSON.stringify([...this.completedVideos]));
         this.updateProgressUI();
@@ -751,9 +843,12 @@ class StatQuestApp {
     const container = document.getElementById('content-body');
     if (!container) return;
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('header-video-title').textContent = 'StatQuest Statistics Fundamentals Cheatsheet';
+    document.title = 'Complete Cheatsheet - StatQuest Interactive';
     container.innerHTML = '';
     renderCheatSheet(container);
     this.refreshIcons();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
 
