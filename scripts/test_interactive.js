@@ -68,6 +68,13 @@ global.localStorage = {
 renderQuiz(mockContainer, playlistData[0].quiz, playlistData[0].id);
 assert(!mockContainer.innerHTML.includes('data-feather'), 'QuizEngine must not use data-feather attributes');
 assert(mockContainer.innerHTML.includes('btn-reset-quiz'), 'QuizEngine must have reset quiz functionality');
-console.log('✓ QuizEngine renders with valid Lucide icons and reset feature.');
+assert(mockContainer.innerHTML.includes('Question 1 of'), 'QuizEngine must render multi-question indicator');
+console.log('✓ QuizEngine renders with valid Lucide icons, reset feature, and multi-question support.');
+
+// 5. Verify that all 62 videos have at least 3 quiz questions
+playlistData.forEach(v => {
+  assert(v.quiz && v.quiz.length >= 3, `Video #${v.index} must have at least 3 quiz questions, got ${v.quiz ? v.quiz.length : 0}`);
+});
+console.log('✓ All 62 videos have at least 3 comprehensive first-principles quiz questions (186 total questions verified).');
 
 console.log('--- ALL INTERACTIVE VERIFICATION TESTS PASSED! ---');

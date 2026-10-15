@@ -15,6 +15,8 @@ import { Interactive2D } from './components/visualizations/interactive2D.js';
 import { renderVideoPlayer } from './components/videoPlayer.js';
 import { renderQuiz } from './components/quizEngine.js';
 import { renderCheatSheet } from './components/cheatsheet.js';
+import { renderPyodideLab } from './components/pyodideRunner.js';
+import { ChallengesLab } from './components/challenges.js';
 
 class StatQuestApp {
   constructor() {
@@ -23,6 +25,8 @@ class StatQuestApp {
     this.currentIndex = 1;
     this.activeTab = 'overview';
     this.completedVideos = new Set(JSON.parse(localStorage.getItem('statquest_completed_videos') || '[]'));
+    this.currentTheme = localStorage.getItem('statquest_theme') || 'bw-dark';
+    document.documentElement.setAttribute('data-theme', this.currentTheme);
 
     this.threeStudio = null;
     this.interactive2D = null;
@@ -114,6 +118,10 @@ class StatQuestApp {
               </div>
             </div>
             <div class="header-right">
+              <button class="theme-toggle-btn" id="btn-theme-toggle" title="Cycle Black & White Themes">
+                <i data-lucide="sun-moon"></i>
+                <span id="theme-text">B&W Dark</span>
+              </button>
               <button class="btn btn-secondary btn-sm" id="btn-toggle-complete">
                 <i data-lucide="check-circle" id="complete-icon"></i>
                 <span id="complete-text">Mark Completed</span>
@@ -136,10 +144,13 @@ class StatQuestApp {
               <i data-lucide="sliders"></i> 2D Simulation Lab
             </button>
             <button class="tab-btn" data-tab="code">
-              <i data-lucide="code"></i> Python & R
+              <i data-lucide="terminal"></i> Pyodide & Code Lab
+            </button>
+            <button class="tab-btn" data-tab="challenges">
+              <i data-lucide="zap"></i> Challenges
             </button>
             <button class="tab-btn" data-tab="quiz">
-              <i data-lucide="help-circle"></i> Knowledge Check
+              <i data-lucide="help-circle"></i> Knowledge Check (3 Questions)
             </button>
           </div>
 
@@ -299,6 +310,29 @@ class StatQuestApp {
       this.toggleVideoCompleted(this.currentIndex);
     });
 
+    // Theme Toggle
+    const themeBtn = document.getElementById('btn-theme-toggle');
+    const themeText = document.getElementById('theme-text');
+    const themes = ['bw-dark', 'bw-light', 'bw-contrast'];
+    const themeLabels = {
+      'bw-dark': 'B&W Dark',
+      'bw-light': 'B&W Light',
+      'bw-contrast': 'High Contrast'
+    };
+    if (themeText) themeText.textContent = themeLabels[this.currentTheme] || 'B&W Dark';
+
+    if (themeBtn) {
+      themeBtn.addEventListener('click', () => {
+        const curIdx = themes.indexOf(this.currentTheme);
+        const nextTheme = themes[(curIdx + 1) % themes.length];
+        this.currentTheme = nextTheme;
+        document.documentElement.setAttribute('data-theme', nextTheme);
+        localStorage.setItem('statquest_theme', nextTheme);
+        if (themeText) themeText.textContent = themeLabels[nextTheme];
+        this.refreshIcons();
+      });
+    }
+
     // Cheatsheet modal / tab
     document.getElementById('btn-open-cheatsheet').addEventListener('click', () => {
       this.openCheatsheet();
@@ -448,6 +482,9 @@ class StatQuestApp {
       case 'code':
         this.renderCodeTab(container, video);
         break;
+      case 'challenges':
+        new ChallengesLab(container);
+        break;
       case 'quiz':
         this.renderQuizTab(container, video);
         break;
@@ -520,6 +557,44 @@ class StatQuestApp {
       <div class="section-card">
         <h3><i data-lucide="book-open"></i> First-Principles Mathematical Foundation</h3>
         <p>${this.renderTextWithMath(video.firstPrinciples)}</p>
+      </div>
+
+      <div class="section-card">
+        <h3><i data-lucide="git-merge"></i> Step-by-Step Derivation from Axiomatic Foundations</h3>
+        <p>Statistical reasoning built from foundational probability axioms to eliminate black-box leaps:</p>
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 14px;">
+          <div style="background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 14px 16px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+              <span style="background: var(--accent-primary); color: var(--accent-contrast); font-weight: 800; font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; font-family: var(--font-mono);">STEP 1</span>
+              <strong style="font-size: 0.88rem;">Axiomatic Grounding & Data Generating Process</strong>
+            </div>
+            <p style="font-size: 0.84rem; color: var(--text-secondary); margin: 0;">We formalize sample space \\(\\Omega\\), random variable \\(X\\), and ground-truth expectation \\(E[X] = \\mu\\). Probability measure \\(P\\) satisfies Kolmogorov's axioms \\(P(E) \\ge 0\\), \\(P(\\Omega) = 1\\), and countable additivity.</p>
+          </div>
+
+          <div style="background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 14px 16px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+              <span style="background: var(--accent-primary); color: var(--accent-contrast); font-weight: 800; font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; font-family: var(--font-mono);">STEP 2</span>
+              <strong style="font-size: 0.88rem;">Variance & Loss Decomposition</strong>
+            </div>
+            <p style="font-size: 0.84rem; color: var(--text-secondary); margin: 0;">Total sum of squares decomposes into explained variance plus orthogonal residual error: \\(\\sum (y_i - \\bar{y})^2 = \\sum (\\hat{y}_i - \\bar{y})^2 + \\sum (y_i - \\hat{y}_i)^2\\). Cross-product terms vanish by first-order orthogonality conditions.</p>
+          </div>
+
+          <div style="background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 14px 16px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+              <span style="background: var(--accent-primary); color: var(--accent-contrast); font-weight: 800; font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; font-family: var(--font-mono);">STEP 3</span>
+              <strong style="font-size: 0.88rem;">Calculus Optimization & Normal Equations</strong>
+            </div>
+            <p style="font-size: 0.84rem; color: var(--text-secondary); margin: 0;">Differentiating the objective (Log-Likelihood \\(\\ln \\mathcal{L}\\) or Loss \\(\\text{RSS}\\)) with respect to parameter \\(\\theta\\) and setting to zero yields the stationary estimator equation \\(\\frac{\\partial \\ln \\mathcal{L}}{\\partial \\theta} = 0\\).</p>
+          </div>
+
+          <div style="background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 14px 16px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+              <span style="background: var(--accent-primary); color: var(--accent-contrast); font-weight: 800; font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; font-family: var(--font-mono);">STEP 4</span>
+              <strong style="font-size: 0.88rem;">Finite-Sample Unbiasedness & Asymptotic Convergence</strong>
+            </div>
+            <p style="font-size: 0.84rem; color: var(--text-secondary); margin: 0;">By the Law of Large Numbers and Central Limit Theorem, estimators converge almost surely: \\(\\hat{\\theta}_n \\xrightarrow{p} \\theta\\), with asymptotic distribution \\(\\sqrt{n}(\\hat{\\theta}_n - \\theta) \\xrightarrow{d} \\mathcal{N}(0, I(\\theta)^{-1})\\). BAM!</p>
+          </div>
+        </div>
       </div>
 
       <div class="section-card">
@@ -764,61 +839,82 @@ class StatQuestApp {
   }
 
   // ==========================================
-  // TAB 5: PYTHON & R CODE
+  // TAB 5: PYODIDE & R CODE LAB
   // ==========================================
   renderCodeTab(container, video) {
     const wrap = document.createElement('div');
-    wrap.className = 'code-tabs-container';
+    wrap.className = 'code-tabs-wrapper';
 
     wrap.innerHTML = `
-      <div class="code-tabs-header">
-        <div class="code-tabs-left">
-          <button class="code-tab-btn active" data-lang="python">Python (NumPy / SciPy)</button>
-          <button class="code-tab-btn" data-lang="r">R (Base / Stats)</button>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-primary btn-sm code-switch-btn active" data-lang="python">
+            <i data-lucide="terminal"></i> Interactive Python (Pyodide Wasm Sandbox)
+          </button>
+          <button class="btn btn-secondary btn-sm code-switch-btn" data-lang="r">
+            <i data-lucide="code"></i> R Code (Base & Stats)
+          </button>
         </div>
-        <button class="btn btn-ghost btn-sm" id="btn-copy-code">
-          <i data-lucide="copy"></i> Copy Code
-        </button>
       </div>
-      <div class="code-body">
-        <pre class="code-block-pre"><code id="code-display">${video.pythonCode}</code></pre>
-      </div>
+      <div id="code-panel-mount"></div>
     `;
 
     container.appendChild(wrap);
 
-    const display = wrap.querySelector('#code-display');
-    const copyBtn = wrap.querySelector('#btn-copy-code');
-    const tabs = wrap.querySelectorAll('.code-tab-btn');
+    const mount = wrap.querySelector('#code-panel-mount');
+    const switchBtns = wrap.querySelectorAll('.code-switch-btn');
 
-    let currentCode = video.pythonCode;
-
-    tabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        tabs.forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        if (tab.dataset.lang === 'python') {
-          currentCode = video.pythonCode;
-          display.textContent = video.pythonCode;
+    const renderMode = (lang) => {
+      switchBtns.forEach(btn => {
+        if (btn.dataset.lang === lang) {
+          btn.className = 'btn btn-primary btn-sm code-switch-btn active';
         } else {
-          currentCode = video.rCode;
-          display.textContent = video.rCode;
+          btn.className = 'btn btn-secondary btn-sm code-switch-btn';
         }
       });
+
+      mount.innerHTML = '';
+      if (lang === 'python') {
+        renderPyodideLab(mount, video);
+      } else {
+        const rBox = document.createElement('div');
+        rBox.className = 'section-card';
+        rBox.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="badge badge-primary">R 4.x</span>
+              <strong style="font-size: 0.95rem;">R Statistical Implementation</strong>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="btn-copy-r-code">
+              <i data-lucide="copy"></i> Copy R Script
+            </button>
+          </div>
+          <pre style="background: #000; color: #f4f4f5; padding: 18px; border-radius: 6px; font-family: var(--font-mono); font-size: 0.85rem; line-height: 1.5; overflow-x: auto; border: 1px solid var(--border-color);"><code>${video.rCode}</code></pre>
+        `;
+        mount.appendChild(rBox);
+
+        const copyBtn = rBox.querySelector('#btn-copy-r-code');
+        copyBtn.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(video.rCode);
+            copyBtn.innerHTML = `<i data-lucide="check"></i> Copied!`;
+            setTimeout(() => {
+              copyBtn.innerHTML = `<i data-lucide="copy"></i> Copy R Script`;
+              this.refreshIcons();
+            }, 1800);
+          } catch (err) {
+            console.error('Clipboard copy error:', err);
+          }
+        });
+      }
+      this.refreshIcons();
+    };
+
+    switchBtns.forEach(b => {
+      b.addEventListener('click', () => renderMode(b.dataset.lang));
     });
 
-    copyBtn.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(currentCode);
-        copyBtn.innerHTML = `<i data-lucide="check"></i> Copied!`;
-        setTimeout(() => {
-          copyBtn.innerHTML = `<i data-lucide="copy"></i> Copy Code`;
-          this.refreshIcons();
-        }, 2000);
-      } catch (err) {
-        console.error('Clipboard copy error:', err);
-      }
-    });
+    renderMode('python');
   }
 
   // ==========================================

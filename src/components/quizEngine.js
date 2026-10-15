@@ -1,6 +1,8 @@
 // src/components/quizEngine.js
 /**
  * Interactive Knowledge Check Quiz Component.
+ * Supports multi-question mastery checks per lesson with live scoring,
+ * category badges, detailed pedagogical explanations, and reset functionality.
  */
 
 export function renderQuiz(container, questions, videoId, onComplete = null) {
@@ -16,12 +18,33 @@ export function renderQuiz(container, questions, videoId, onComplete = null) {
   const storedQuiz = JSON.parse(localStorage.getItem('statquest_quiz_progress') || '{}');
   const videoState = storedQuiz[videoId] || {};
 
+  // Calculate current score
+  let correctCount = 0;
+  let answeredCount = 0;
+  questions.forEach((q, idx) => {
+    if (videoState[idx] !== undefined) {
+      answeredCount++;
+      if (videoState[idx] === q.answer) correctCount++;
+    }
+  });
+
+  const categories = [
+    { title: "Conceptual Intuition", icon: "brain" },
+    { title: "Mathematical Mechanics", icon: "calculator" },
+    { title: "Critical Pitfall & Diagnosis", icon: "alert-triangle" }
+  ];
+
+  const allCompleted = answeredCount === questions.length;
+  const isPerfect = allCompleted && correctCount === questions.length;
+
   container.innerHTML = `
     <div class="quiz-container">
       <div class="quiz-header">
         <div class="quiz-header-left">
           <h3><i data-lucide="check-circle"></i> Knowledge Check: Test Your Intuition</h3>
-          <span class="quiz-status-badge">Concept Mastery</span>
+          <div class="quiz-score-badge ${isPerfect ? 'score-perfect' : ''}">
+            Score: <span id="quiz-score-num">${correctCount}</span> / ${questions.length}
+          </div>
         </div>
         <div class="quiz-header-right">
           <button class="btn btn-ghost btn-sm" id="btn-reset-quiz" title="Reset this quiz to try again">
@@ -29,13 +52,29 @@ export function renderQuiz(container, questions, videoId, onComplete = null) {
           </button>
         </div>
       </div>
+
+      ${isPerfect ? `
+        <div class="quiz-mastery-banner">
+          <div class="mastery-badge">BAM!</div>
+          <div class="mastery-text">
+            <strong>Mastery Achieved!</strong> You answered all ${questions.length} first-principles questions correctly.
+          </div>
+        </div>
+      ` : ''}
+
       <div class="quiz-questions-list">
         ${questions.map((q, qIdx) => {
           const userAns = videoState[qIdx];
           const answered = userAns !== undefined;
+          const cat = categories[qIdx % categories.length];
+
           return `
-            <div class="quiz-question-card" data-qidx="${qIdx}">
-              <p class="question-text"><strong>Q${qIdx + 1}:</strong> ${q.question}</p>
+            <div class="quiz-question-card ${answered ? (userAns === q.answer ? 'card-correct' : 'card-incorrect') : ''}" data-qidx="${qIdx}">
+              <div class="question-meta-row">
+                <span class="q-number-pill">Question ${qIdx + 1} of ${questions.length}</span>
+                <span class="q-category-tag"><i data-lucide="${cat.icon}"></i> ${cat.title}</span>
+              </div>
+              <p class="question-text">${q.question}</p>
               <div class="quiz-options">
                 ${q.options.map((opt, optIdx) => {
                   let optClass = 'quiz-option-btn';
@@ -53,7 +92,7 @@ export function renderQuiz(container, questions, videoId, onComplete = null) {
                 }).join('')}
               </div>
               <div class="quiz-explanation ${answered ? 'revealed' : ''}">
-                <p><strong>Explanation:</strong> ${q.explanation}</p>
+                <p><strong>First-Principles Explanation:</strong> ${q.explanation}</p>
               </div>
             </div>
           `;
@@ -105,8 +144,21 @@ export function renderQuiz(container, questions, videoId, onComplete = null) {
 
         expl.classList.add('revealed');
 
+        if (chosen === qData.answer) {
+          card.classList.add('card-correct');
+        } else {
+          card.classList.add('card-incorrect');
+        }
+
+        // Re-render to update score header and check mastery
+        renderQuiz(container, questions, videoId, onComplete);
+
         if (onComplete) onComplete(qIdx, chosen === qData.answer);
       });
     });
   });
+
+  if (typeof window !== 'undefined' && window.lucide && window.lucide.createIcons) {
+    window.lucide.createIcons();
+  }
 }
