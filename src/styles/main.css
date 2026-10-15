@@ -2745,6 +2745,150 @@ input[type="checkbox"] {
   }
 }
 
+.pyodide-lab-wrapper,
+.pyodide-editor-container,
+.pyodide-code-area,
+.pyodide-toolbar,
+.terminal-body {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.pyodide-code-area {
+  min-width: 0;
+}
+
+@media (max-width: 560px) {
+  .code-card-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .code-card-head .btn {
+    justify-content: center;
+  }
+
+  .code-block {
+    font-size: 0.76rem;
+    padding: 14px;
+    line-height: 1.55;
+  }
+
+  .segmented {
+    width: 100%;
+  }
+
+  .code-switch-btn,
+  .segmented .segment {
+    flex: 1;
+    justify-content: center;
+    white-space: nowrap;
+    min-width: 0;
+  }
+
+  .pyodide-toolbar {
+    padding: 12px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .engine-selector-wrap {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .engine-label {
+    white-space: nowrap;
+  }
+
+  .runtime-switch-group {
+    width: 100%;
+  }
+
+  .btn-runtime-choice {
+    flex: 1;
+    justify-content: center;
+    text-align: center;
+    padding: 8px 6px;
+    line-height: 1.25;
+  }
+
+  .pyodide-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .pyodide-actions .btn {
+    justify-content: center;
+    min-width: 0;
+  }
+
+  .pyodide-actions .btn-primary {
+    grid-column: 1 / -1;
+    min-height: 42px;
+  }
+
+  .pyodide-presets-bar {
+    padding: 10px 12px;
+  }
+
+  .pyodide-editor-container {
+    height: 210px;
+  }
+
+  .editor-gutter {
+    width: 34px;
+    padding: 10px 5px;
+    font-size: 0.72rem;
+  }
+
+  .pyodide-code-area {
+    padding: 10px 12px;
+    font-size: 0.76rem;
+    overflow-wrap: normal;
+  }
+
+  .terminal-header {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
+  .terminal-dots {
+    display: none;
+  }
+
+  .terminal-title {
+    margin-left: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+
+  .terminal-meta {
+    font-size: 0.66rem;
+    gap: 6px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .terminal-body {
+    padding: 12px;
+    font-size: 0.74rem;
+    max-height: 200px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .terminal-body * {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+}
+
 .sidebar-backdrop {
   display: none;
   position: fixed;

@@ -144,7 +144,7 @@ class StatQuestApp {
             <div class="brand-title">
               <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
                 <rect width="40" height="40" rx="9"/>
-                <path class="brand-tail" d="M27 19.5 C29 24.75 31 30 34 30 L27 30 Z"/>
+                <path class="brand-tail" d="M6 30 C12 30 14 9 20 9 C26 9 28 30 34 30 Z"/>
                 <path class="brand-bell" d="M6 30 C12 30 14 9 20 9 C26 9 28 30 34 30"/>
               </svg>
               <div>
@@ -965,4 +965,7 @@ class StatQuestApp {
 
 window.addEventListener('DOMContentLoaded', () => {
   window.app = new StatQuestApp();
+  if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(err => console.error('Service worker registration failed:', err));
+  }
 });
