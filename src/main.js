@@ -11,6 +11,7 @@ import { createIcons, icons } from 'lucide';
 import { modulesData } from './data/modulesData.js';
 import { playlistData } from './data/playlistData.js';
 import { moduleDerivations } from './data/theoryDerivations.js';
+import { deepContentByIndex } from './data/deepContent/index.js';
 import { ThreeStudio } from './components/visualizations/threeStudio.js';
 import { Interactive2D } from './components/visualizations/interactive2D.js';
 import { renderVideoPlayer } from './components/videoPlayer.js';
@@ -18,14 +19,58 @@ import { renderQuiz } from './components/quizEngine.js';
 import { renderCheatSheet } from './components/cheatsheet.js';
 import { renderPyodideLab } from './components/pyodideRunner.js';
 import { ChallengesLab } from './components/challenges.js';
+import { watchInlineMath } from './components/mathify.js';
 
-// Expose lucide globally so components can refresh icons
 if (typeof window !== 'undefined') {
   window.lucide = {
     createIcons: (options) => createIcons({ icons, ...options }),
     icons
   };
 }
+
+const TABS = [
+  { id: 'overview', label: 'Overview', icon: 'play-circle', group: 'Learn' },
+  { id: 'theory', label: 'Theory', icon: 'book-open' },
+  { id: 'interactive3d', label: '3D Studio', icon: 'box', group: 'Simulate' },
+  { id: 'interactive2d', label: '2D Lab', icon: 'sliders' },
+  { id: 'code', label: 'Code Lab', icon: 'terminal', group: 'Practice' },
+  { id: 'challenges', label: 'Challenges', icon: 'zap' },
+  { id: 'quiz', label: 'Quiz', icon: 'circle-help' }
+];
+
+const THEMES = {
+  'bw-dark': 'B&W Dark',
+  'bw-light': 'B&W Light',
+  'bw-contrast': 'High Contrast'
+};
+
+const SCENE_FOR_TYPE = {
+  least_squares_line: 'lossBowl',
+  regression3d: 'regression3d',
+  regression_intro: 'regression3d',
+  regression_deep: 'regression3d',
+  r_squared: 'regression3d',
+  r_regression: 'regression3d',
+  multiple_r: 'regression3d',
+  linear_models_anova: 'regression3d',
+  mle3d: 'mle3d',
+  mle_exp: 'mle3d',
+  mle_binom: 'mle3d',
+  mle_norm: 'mle3d',
+  cov3d: 'cov3d',
+  covariance: 'cov3d',
+  normal3d: 'normal3d'
+};
+
+const SCENE_NAMES = {
+  normal3d: '3D Gaussian bell & slicing manifold',
+  regression3d: '3D multiple regression plane & residuals',
+  lossBowl: '3D least squares loss paraboloid',
+  mle3d: '3D maximum likelihood landscape',
+  cov3d: '3D covariance ellipsoid & data cloud'
+};
+
+const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 class StatQuestApp {
   constructor() {
@@ -48,125 +93,122 @@ class StatQuestApp {
     this.updateProgressUI();
   }
 
-  // Helper for KaTeX LaTeX rendering
   renderMath(latex, displayMode = true) {
     try {
       return katex.renderToString(latex, { throwOnError: false, displayMode });
     } catch (e) {
-      return `<code class="math-fallback">${latex}</code>`;
+      return `<code class="math-fallback">${escapeHtml(latex)}</code>`;
     }
   }
 
-  // Parse inline math $...$ in markdown text
   renderTextWithMath(text) {
     if (!text) return '';
-    let formatted = text.replace(/\$\$(.+?)\$\$/g, (m, tex) => this.renderMath(tex, true));
-    formatted = formatted.replace(/\$(.+?)\$/g, (m, tex) => this.renderMath(tex, false));
+    let formatted = text.replace(/\$\$([\s\S]+?)\$\$/g, (m, tex) => this.renderMath(tex, true));
+    formatted = formatted.replace(/\$([^$]+?)\$/g, (m, tex) => this.renderMath(tex, false));
     return formatted;
+  }
+
+  getVideo(index = this.currentIndex) {
+    return this.playlist.find(v => v.index === index);
+  }
+
+  getModule(moduleId) {
+    return this.modules.find(m => m.id === moduleId);
+  }
+
+  getQuestions(video) {
+    const deep = deepContentByIndex[video.index];
+    return [...(video.quiz || []), ...((deep && deep.quiz) || [])];
   }
 
   initDOM() {
     const appEl = document.getElementById('app');
+    const tabsHtml = TABS.map((t, i) => `
+      ${t.group && i > 0 ? '<span class="tab-divider" aria-hidden="true"></span>' : ''}
+      <button class="tab-btn ${t.id === this.activeTab ? 'active' : ''}" role="tab" title="${t.label}"
+        id="tab-${t.id}" data-tab="${t.id}" aria-controls="content-body"
+        aria-selected="${t.id === this.activeTab}" tabindex="${t.id === this.activeTab ? 0 : -1}">
+        <i data-lucide="${t.icon}" aria-hidden="true"></i>
+        <span class="tab-label">${t.label}</span>
+        <span class="tab-count" id="tab-count-${t.id}" hidden></span>
+      </button>
+    `).join('');
+
     appEl.innerHTML = `
+      <a class="skip-link" href="#content-body">Skip to lesson content</a>
       <div class="app-layout">
-        <!-- Mobile Sidebar Backdrop Overlay -->
         <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
 
-        <!-- Sidebar Navigation -->
-        <aside class="sidebar" id="sidebar">
+        <aside class="sidebar" id="sidebar" aria-label="Course navigation">
           <div class="sidebar-header">
             <div class="brand-title">
-              <div class="brand-icon">SQ</div>
-              <span>StatQuest Interactive</span>
+              <div class="brand-icon" aria-hidden="true">SQ</div>
+              <div>
+                <div class="brand-name">StatQuest</div>
+                <div class="brand-sub">Statistics Fundamentals</div>
+              </div>
             </div>
-            <span class="bam-tag">BAM!</span>
           </div>
 
-          <!-- Progress Header -->
           <div class="curriculum-progress-wrap">
             <div class="progress-header">
-              <span>Course Progress</span>
+              <span>Course progress</span>
               <span id="progress-percent">0%</span>
             </div>
-            <div class="progress-bar-bg">
+            <div class="progress-bar-bg" role="progressbar" aria-label="Course progress" aria-valuemin="0" aria-valuemax="100" id="progress-track">
               <div class="progress-bar-fill" id="progress-fill"></div>
             </div>
           </div>
 
-          <!-- Search Filter -->
           <div class="search-container">
+            <label class="sr-only" for="search-input">Search videos and formulas</label>
             <div class="search-input-wrap">
-              <i data-lucide="search" class="search-icon"></i>
-              <input type="text" id="search-input" class="search-input" placeholder="Search 62 videos, formulas...">
+              <i data-lucide="search" class="search-icon" aria-hidden="true"></i>
+              <input type="search" id="search-input" class="search-input" placeholder="Search videos and formulas" autocomplete="off">
             </div>
           </div>
 
-          <!-- Module Tree -->
-          <nav class="sidebar-nav" id="sidebar-nav"></nav>
+          <nav class="sidebar-nav" id="sidebar-nav" aria-label="Modules and videos"></nav>
 
-          <!-- Sidebar Footer -->
           <div class="sidebar-footer">
-            <button class="btn btn-secondary btn-sm" id="btn-open-cheatsheet" style="flex: 1;">
-              <i data-lucide="book-open"></i> Cheatsheet
+            <button class="btn btn-secondary btn-sm" id="btn-open-cheatsheet" type="button">
+              <i data-lucide="book-open" aria-hidden="true"></i> Cheatsheet
             </button>
-            <a href="https://github.com/srivtx/stats" target="_blank" class="btn btn-ghost btn-sm" title="View Source on GitHub">
-              <i data-lucide="github"></i>
+            <a href="https://github.com/srivtx/stats" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">
+              <i data-lucide="external-link" aria-hidden="true"></i> Source
             </a>
           </div>
         </aside>
 
-        <!-- Main Viewport -->
-        <main class="main-viewport" id="main-viewport">
-          <!-- Top App Bar -->
+        <div class="main-viewport" id="main-viewport">
           <header class="top-header">
             <div class="header-left">
-              <button class="menu-toggle-btn" id="menu-toggle" aria-label="Toggle Navigation">
-                <i data-lucide="menu"></i>
+              <button class="menu-toggle-btn" id="menu-toggle" type="button" aria-label="Open course navigation" aria-controls="sidebar" aria-expanded="false">
+                <i data-lucide="menu" aria-hidden="true"></i>
               </button>
               <div class="video-heading-wrap">
-                <h1 id="header-video-title">StatQuest Statistics Fundamentals</h1>
+                <p class="eyebrow" id="header-eyebrow">StatQuest Statistics Fundamentals</p>
+                <h1 id="header-video-title">Loading lesson…</h1>
               </div>
             </div>
             <div class="header-right">
-              <button class="theme-toggle-btn" id="btn-theme-toggle" title="Cycle Black & White Themes">
-                <i data-lucide="sun-moon"></i>
-                <span id="theme-text">B&W Dark</span>
+              <button class="theme-toggle-btn" id="btn-theme-toggle" type="button" title="Cycle black and white themes">
+                <i data-lucide="sun-moon" aria-hidden="true"></i>
+                <span id="theme-text">${THEMES[this.currentTheme]}</span>
               </button>
-              <button class="btn btn-secondary btn-sm" id="btn-toggle-complete">
-                <i data-lucide="check-circle" id="complete-icon"></i>
-                <span id="complete-text">Mark Completed</span>
+              <button class="btn btn-secondary btn-sm" id="btn-toggle-complete" type="button" aria-pressed="false">
+                <i data-lucide="check-circle" id="complete-icon" aria-hidden="true"></i>
+                <span id="complete-text">Mark completed</span>
               </button>
             </div>
           </header>
 
-          <!-- Navigation Tabs Bar -->
-          <div class="view-tabs-bar" id="view-tabs">
-            <button class="tab-btn active" data-tab="overview">
-              <i data-lucide="play-circle"></i> Overview & Video
-            </button>
-            <button class="tab-btn" data-tab="theory">
-              <i data-lucide="file-text"></i> First-Principles Theory
-            </button>
-            <button class="tab-btn" data-tab="interactive3d">
-              <i data-lucide="box"></i> 3D Spatial Studio
-            </button>
-            <button class="tab-btn" data-tab="interactive2d">
-              <i data-lucide="sliders"></i> 2D Simulation Lab
-            </button>
-            <button class="tab-btn" data-tab="code">
-              <i data-lucide="terminal"></i> Pyodide & Code Lab
-            </button>
-            <button class="tab-btn" data-tab="challenges">
-              <i data-lucide="zap"></i> Challenges
-            </button>
-            <button class="tab-btn" data-tab="quiz">
-              <i data-lucide="help-circle"></i> Knowledge Check (3 Questions)
-            </button>
-          </div>
+          <nav class="view-tabs-bar" aria-label="Lesson sections">
+            <div class="tablist" role="tablist" aria-label="Lesson sections" id="view-tabs">${tabsHtml}</div>
+          </nav>
 
-          <!-- Body Content Area -->
-          <div class="content-body" id="content-body"></div>
-        </main>
+          <div class="content-body" id="content-body" role="tabpanel" aria-labelledby="tab-${this.activeTab}" tabindex="-1"></div>
+        </div>
       </div>
     `;
 
@@ -199,160 +241,168 @@ class StatQuestApp {
       if (query && filteredVideos.length === 0) return '';
 
       const isOpen = Boolean(query) || moduleVideos.some(v => v.index === this.currentIndex);
+      const doneInModule = moduleVideos.filter(v => this.completedVideos.has(v.index)).length;
 
       return `
         <div class="module-group ${isOpen ? 'open' : ''}" data-modid="${mod.id}">
-          <div class="module-header">
-            <div class="module-title-left">
-              <span class="module-dot" style="background-color: ${mod.color};"></span>
-              <span>Mod ${mod.number}: ${mod.title}</span>
-            </div>
-            <i data-lucide="chevron-right" class="module-chevron"></i>
-          </div>
-          <div class="video-list">
+          <button class="module-header" type="button" aria-expanded="${isOpen}">
+            <span class="module-title-left">
+              <span class="module-number">${String(mod.number).padStart(2, '0')}</span>
+              <span class="module-name">${escapeHtml(mod.title)}</span>
+            </span>
+            <span class="module-meta">
+              <span class="module-progress">${doneInModule}/${moduleVideos.length}</span>
+              <i data-lucide="chevron-right" class="module-chevron" aria-hidden="true"></i>
+            </span>
+          </button>
+          <ul class="video-list">
             ${filteredVideos.map(v => {
               const isActive = v.index === this.currentIndex;
               const isChecked = this.completedVideos.has(v.index);
               return `
-                <a href="#video-${v.index}" class="video-nav-item ${isActive ? 'active' : ''}" data-index="${v.index}">
-                  <div class="nav-item-left">
-                    <span class="nav-idx">#${v.index}</span>
-                    <span class="nav-title">${v.shortTitle}</span>
+                <li>
+                  <div class="video-nav-item ${isActive ? 'active' : ''}" data-index="${v.index}">
+                    <a href="#video-${v.index}" class="nav-link" ${isActive ? 'aria-current="page"' : ''}>
+                      <span class="nav-idx">#${v.index}</span>
+                      <span class="nav-title">${escapeHtml(v.shortTitle)}</span>
+                    </a>
+                    <button type="button" class="nav-completed-check ${isChecked ? 'checked' : ''}" data-chkidx="${v.index}"
+                      aria-label="${isChecked ? 'Unmark' : 'Mark'} #${v.index} ${escapeHtml(v.shortTitle)} as completed">
+                      ${isChecked ? '<i data-lucide="check" aria-hidden="true"></i>' : ''}
+                    </button>
                   </div>
-                  <div class="nav-completed-check ${isChecked ? 'checked' : ''}" data-chkidx="${v.index}" title="Mark learned">
-                    ${isChecked ? '✓' : ''}
-                  </div>
-                </a>
+                </li>
               `;
             }).join('')}
-          </div>
+          </ul>
         </div>
       `;
     }).join('');
 
-    // Module collapse toggles
     nav.querySelectorAll('.module-header').forEach(header => {
       header.addEventListener('click', () => {
-        header.closest('.module-group').classList.toggle('open');
+        const group = header.closest('.module-group');
+        group.classList.toggle('open');
+        header.setAttribute('aria-expanded', String(group.classList.contains('open')));
         this.refreshIcons();
       });
     });
 
-    // Checkbox toggles in sidebar
     nav.querySelectorAll('.nav-completed-check').forEach(chk => {
       chk.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        const idx = parseInt(chk.dataset.chkidx);
-        this.toggleVideoCompleted(idx);
+        this.toggleVideoCompleted(parseInt(chk.dataset.chkidx));
       });
     });
 
-    // Auto-scroll active item into view
     setTimeout(() => {
       const activeEl = nav.querySelector('.video-nav-item.active');
-      if (activeEl) {
-        activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      }
+      if (activeEl) activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }, 50);
 
     this.refreshIcons();
   }
 
   initEvents() {
-    // Window hash routing
     window.addEventListener('hashchange', () => this.handleRoute());
 
-    // Search input
     const searchInput = document.getElementById('search-input');
     searchInput.addEventListener('input', (e) => {
       this.searchQuery = e.target.value;
       this.renderSidebarNav();
     });
 
-    // Tab buttons
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        this.activeTab = btn.dataset.tab;
-        this.renderActiveTabContent();
-      });
+    const tablist = document.getElementById('view-tabs');
+    tablist.addEventListener('click', (e) => {
+      const btn = e.target.closest('.tab-btn');
+      if (btn) this.selectTab(btn.dataset.tab);
+    });
+    tablist.addEventListener('keydown', (e) => {
+      const tabs = [...tablist.querySelectorAll('.tab-btn')];
+      const current = tabs.indexOf(document.activeElement);
+      if (current < 0) return;
+      let next = null;
+      if (e.key === 'ArrowRight') next = (current + 1) % tabs.length;
+      else if (e.key === 'ArrowLeft') next = (current - 1 + tabs.length) % tabs.length;
+      else if (e.key === 'Home') next = 0;
+      else if (e.key === 'End') next = tabs.length - 1;
+      if (next === null) return;
+      e.preventDefault();
+      tabs[next].focus();
+      this.selectTab(tabs[next].dataset.tab);
     });
 
-    // Mobile menu toggle & backdrop
     const menuBtn = document.getElementById('menu-toggle');
     const sidebar = document.getElementById('sidebar');
     const backdrop = document.getElementById('sidebar-backdrop');
-
-    menuBtn.addEventListener('click', () => {
-      sidebar.classList.toggle('mobile-open');
-      backdrop.classList.toggle('active');
+    const setMenu = (open) => {
+      sidebar.classList.toggle('mobile-open', open);
+      backdrop.classList.toggle('active', open);
+      menuBtn.setAttribute('aria-expanded', String(open));
+    };
+    menuBtn.addEventListener('click', () => setMenu(!sidebar.classList.contains('mobile-open')));
+    backdrop.addEventListener('click', () => setMenu(false));
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') setMenu(false);
     });
 
-    backdrop.addEventListener('click', () => {
-      sidebar.classList.remove('mobile-open');
-      backdrop.classList.remove('active');
-    });
-
-    // Close mobile menu on item click
     document.addEventListener('click', (e) => {
       const isNav = e.target.closest('.video-nav-item') || e.target.closest('#btn-open-cheatsheet');
-      if (isNav && window.innerWidth <= 900) {
-        sidebar.classList.remove('mobile-open');
-        backdrop.classList.remove('active');
-      }
+      if (isNav && window.innerWidth <= 900) setMenu(false);
     });
 
-    // Keyboard navigation (ArrowLeft = prev, ArrowRight = next)
     window.addEventListener('keydown', (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      const t = e.target;
+      if (t.closest && (t.closest('input, textarea, select, [contenteditable="true"], [role="tablist"]'))) return;
       if (e.key === 'ArrowLeft' && this.currentIndex > 1) {
         window.location.hash = `#video-${this.currentIndex - 1}`;
-      } else if (e.key === 'ArrowRight' && this.currentIndex < 62) {
+      } else if (e.key === 'ArrowRight' && this.currentIndex < this.playlist.length) {
         window.location.hash = `#video-${this.currentIndex + 1}`;
       }
     });
 
-    // Top Header Complete Button
-    const completeBtn = document.getElementById('btn-toggle-complete');
-    completeBtn.addEventListener('click', () => {
+    document.getElementById('btn-toggle-complete').addEventListener('click', () => {
       this.toggleVideoCompleted(this.currentIndex);
     });
 
-    // Theme Toggle
     const themeBtn = document.getElementById('btn-theme-toggle');
-    const themeText = document.getElementById('theme-text');
-    const themes = ['bw-dark', 'bw-light', 'bw-contrast'];
-    const themeLabels = {
-      'bw-dark': 'B&W Dark',
-      'bw-light': 'B&W Light',
-      'bw-contrast': 'High Contrast'
-    };
-    if (themeText) themeText.textContent = themeLabels[this.currentTheme] || 'B&W Dark';
-
-    if (themeBtn) {
-      themeBtn.addEventListener('click', () => {
-        const curIdx = themes.indexOf(this.currentTheme);
-        const nextTheme = themes[(curIdx + 1) % themes.length];
-        this.currentTheme = nextTheme;
-        document.documentElement.setAttribute('data-theme', nextTheme);
-        localStorage.setItem('statquest_theme', nextTheme);
-        if (themeText) themeText.textContent = themeLabels[nextTheme];
-        if (this.threeStudio && this.threeStudio.setTheme) {
-          this.threeStudio.setTheme(nextTheme);
-        }
-        if (this.activeTab === 'challenges' && this.challengesLab) {
-          this.challengesLab.renderStage();
-        }
-        this.refreshIcons();
-      });
-    }
-
-    // Cheatsheet modal / tab
-    document.getElementById('btn-open-cheatsheet').addEventListener('click', () => {
-      this.openCheatsheet();
+    themeBtn.addEventListener('click', () => {
+      const themeKeys = Object.keys(THEMES);
+      const nextTheme = themeKeys[(themeKeys.indexOf(this.currentTheme) + 1) % themeKeys.length];
+      this.currentTheme = nextTheme;
+      document.documentElement.setAttribute('data-theme', nextTheme);
+      localStorage.setItem('statquest_theme', nextTheme);
+      document.getElementById('theme-text').textContent = THEMES[nextTheme];
+      if (this.threeStudio && this.threeStudio.setTheme) this.threeStudio.setTheme(nextTheme);
+      if (this.activeTab === 'challenges' && this.challengesLab) this.challengesLab.renderStage();
+      else this.renderActiveTabContent();
+      this.refreshIcons();
     });
+
+    document.getElementById('btn-open-cheatsheet').addEventListener('click', () => this.openCheatsheet());
+  }
+
+  selectTab(tabId) {
+    if (!TABS.some(t => t.id === tabId) || tabId === this.activeTab) {
+      this.syncTabState();
+      return;
+    }
+    this.activeTab = tabId;
+    this.syncTabState();
+    this.renderActiveTabContent();
+  }
+
+  syncTabState() {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      const isActive = btn.dataset.tab === this.activeTab;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-selected', String(isActive));
+      btn.tabIndex = isActive ? 0 : -1;
+    });
+    const panel = document.getElementById('content-body');
+    if (panel) panel.setAttribute('aria-labelledby', `tab-${this.activeTab}`);
   }
 
   handleRoute() {
@@ -365,7 +415,7 @@ class StatQuestApp {
     const match = hash.match(/#video-(\d+)/);
     if (match) {
       const idx = parseInt(match[1]);
-      if (idx >= 1 && idx <= 62) {
+      if (idx >= 1 && idx <= this.playlist.length) {
         this.currentIndex = idx;
       }
     }
@@ -373,39 +423,37 @@ class StatQuestApp {
   }
 
   renderCurrentVideo() {
-    const video = this.playlist.find(v => v.index === this.currentIndex);
+    const video = this.getVideo();
     if (!video) return;
 
-    // Ensure tabs are visible if returning from cheatsheet
-    document.getElementById('view-tabs').style.display = 'flex';
+    document.getElementById('view-tabs').closest('nav').style.display = '';
 
-    // Update Header
-    document.getElementById('header-video-title').textContent = `#${video.index}. ${video.title}`;
-    document.title = `#${video.index} ${video.shortTitle} - StatQuest Interactive`;
+    const mod = this.getModule(video.moduleId);
+    document.getElementById('header-eyebrow').textContent = `Module ${mod ? mod.number : ''} · ${mod ? mod.title : video.category}`;
+    document.getElementById('header-video-title').textContent = `#${video.index} ${video.title}`;
+    document.title = `#${video.index} ${video.shortTitle} · StatQuest Interactive`;
 
-    // Update complete button status
+    const quizCount = document.getElementById('tab-count-quiz');
+    if (quizCount) {
+      quizCount.textContent = this.getQuestions(video).length;
+      quizCount.hidden = false;
+    }
+
     this.updateHeaderCompleteBtn();
-
-    // Re-render sidebar active highlight
     this.renderSidebarNav();
-
-    // Render active tab view
     this.renderActiveTabContent();
   }
 
   updateHeaderCompleteBtn() {
     const isCompleted = this.completedVideos.has(this.currentIndex);
-    const completeBtn = document.getElementById('btn-toggle-complete');
-    const completeText = document.getElementById('complete-text');
-    if (isCompleted) {
-      completeBtn.classList.remove('btn-secondary');
-      completeBtn.classList.add('btn-primary');
-      completeText.textContent = 'Completed ✓';
-    } else {
-      completeBtn.classList.remove('btn-primary');
-      completeBtn.classList.add('btn-secondary');
-      completeText.textContent = 'Mark Completed';
-    }
+    const btn = document.getElementById('btn-toggle-complete');
+    const text = document.getElementById('complete-text');
+    const icon = document.getElementById('complete-icon');
+    btn.setAttribute('aria-pressed', String(isCompleted));
+    btn.classList.toggle('btn-primary', isCompleted);
+    btn.classList.toggle('btn-secondary', !isCompleted);
+    text.textContent = isCompleted ? 'Completed' : 'Mark completed';
+    if (icon) icon.setAttribute('data-lucide', isCompleted ? 'check-circle' : 'circle');
   }
 
   toggleVideoCompleted(idx) {
@@ -427,32 +475,35 @@ class StatQuestApp {
 
     const fill = document.getElementById('progress-fill');
     const label = document.getElementById('progress-percent');
+    const track = document.getElementById('progress-track');
     if (fill) fill.style.width = `${pct}%`;
     if (label) label.textContent = `${pct}% (${count}/${total})`;
+    if (track) track.setAttribute('aria-valuenow', String(pct));
   }
 
   renderLessonFooter(container) {
-    const prev = this.playlist.find(v => v.index === this.currentIndex - 1);
-    const next = this.playlist.find(v => v.index === this.currentIndex + 1);
+    const prev = this.getVideo(this.currentIndex - 1);
+    const next = this.getVideo(this.currentIndex + 1);
 
-    const footer = document.createElement('div');
+    const footer = document.createElement('nav');
     footer.className = 'lesson-nav-footer';
+    footer.setAttribute('aria-label', 'Lesson navigation');
     footer.innerHTML = `
       <div class="lesson-nav-left">
         ${prev ? `
           <a href="#video-${prev.index}" class="btn btn-secondary btn-nav-prev">
-            <i data-lucide="arrow-left"></i> Previous: #${prev.index} ${prev.shortTitle}
+            <i data-lucide="arrow-left" aria-hidden="true"></i> Previous: #${prev.index} ${escapeHtml(prev.shortTitle)}
           </a>
-        ` : `<div></div>`}
+        ` : ''}
       </div>
       <div class="lesson-nav-right">
         ${next ? `
           <a href="#video-${next.index}" class="btn btn-primary btn-nav-next">
-            Next: #${next.index} ${next.shortTitle} <i data-lucide="arrow-right"></i>
+            Next: #${next.index} ${escapeHtml(next.shortTitle)} <i data-lucide="arrow-right" aria-hidden="true"></i>
           </a>
         ` : `
-          <button class="btn btn-primary" id="btn-finish-cheatsheet">
-            Finish Course & Review Cheatsheet <i data-lucide="award"></i>
+          <button class="btn btn-primary" id="btn-finish-cheatsheet" type="button">
+            Finish course & open cheatsheet <i data-lucide="award" aria-hidden="true"></i>
           </button>
         `}
       </div>
@@ -460,17 +511,14 @@ class StatQuestApp {
     container.appendChild(footer);
 
     const finishBtn = footer.querySelector('#btn-finish-cheatsheet');
-    if (finishBtn) {
-      finishBtn.addEventListener('click', () => this.openCheatsheet());
-    }
+    if (finishBtn) finishBtn.addEventListener('click', () => this.openCheatsheet());
   }
 
   renderActiveTabContent() {
     const container = document.getElementById('content-body');
-    const video = this.playlist.find(v => v.index === this.currentIndex);
+    const video = this.getVideo();
     if (!container || !video) return;
 
-    // Cleanup previous interactive instances
     if (this.threeStudio) {
       this.threeStudio.destroy();
       this.threeStudio = null;
@@ -480,7 +528,10 @@ class StatQuestApp {
       this.interactive2D = null;
     }
 
+    if (this.mathObserver) this.mathObserver.disconnect();
+    this.syncTabState();
     container.innerHTML = '';
+    container.scrollTop = 0;
 
     switch (this.activeTab) {
       case 'overview':
@@ -506,159 +557,187 @@ class StatQuestApp {
         break;
     }
 
-    // Append Previous & Next Lesson Navigation Footer
     this.renderLessonFooter(container);
-
+    this.mathObserver = watchInlineMath(container);
     this.refreshIcons();
   }
 
-  // ==========================================
-  // TAB 1: OVERVIEW & VIDEO
-  // ==========================================
   renderOverviewTab(container, video) {
     const wrap = document.createElement('div');
+    wrap.className = 'lesson-page';
 
-    // Video Player
     const playerBox = document.createElement('div');
     renderVideoPlayer(playerBox, video);
     wrap.appendChild(playerBox);
 
-    // BAM Banner
-    wrap.innerHTML += `
+    const mod = this.getModule(video.moduleId);
+    const deep = deepContentByIndex[video.index];
+    const headline = deep ? deep.derivation.headline : null;
+
+    wrap.insertAdjacentHTML('beforeend', `
       <div class="bam-banner">
         <span class="bam-badge-large">BAM!</span>
-        <div class="bam-text">
-          <p>${video.bamIntuition}</p>
-        </div>
+        <p class="bam-text">${this.renderTextWithMath(video.bamIntuition)}</p>
       </div>
 
-      <div class="section-card">
-        <h3><i data-lucide="info"></i> Executive Summary</h3>
-        <p>${video.summary}</p>
+      <div class="meta-strip" aria-label="Lesson facts">
+        <div><span class="meta-label">Module</span><span class="meta-value">${mod ? mod.number : '—'} · ${escapeHtml(mod ? mod.title : '')}</span></div>
+        <div><span class="meta-label">Video length</span><span class="meta-value">${escapeHtml(video.duration)}</span></div>
+        <div><span class="meta-label">Questions</span><span class="meta-value">${this.getQuestions(video).length}</span></div>
+        <div><span class="meta-label">Simulation</span><span class="meta-value">2D lab${SCENE_FOR_TYPE[video.interactiveType] ? ' + 3D studio' : ''}</span></div>
       </div>
 
-      <div class="section-card">
-        <h3><i data-lucide="compass"></i> Why This Matters</h3>
-        <p>${this.renderTextWithMath(video.firstPrinciples.slice(0, 320))}...</p>
-        <button class="btn btn-secondary btn-sm" id="btn-jump-theory" style="margin-top: 10px;">
-          Read Complete First-Principles Mathematical Derivation →
+      <section class="section-card">
+        <h2 class="section-heading"><i data-lucide="info" aria-hidden="true"></i> Summary</h2>
+        <p>${this.renderTextWithMath(video.summary)}</p>
+      </section>
+
+      <section class="section-card">
+        <h2 class="section-heading"><i data-lucide="compass" aria-hidden="true"></i> The first-principles idea</h2>
+        <p>${this.renderTextWithMath(video.firstPrinciples)}</p>
+        ${headline ? `<p class="theory-teaser">Derivation: <strong>${this.renderTextWithMath(headline)}</strong></p>` : ''}
+        <button class="btn btn-secondary btn-sm" id="btn-jump-theory" type="button">
+          Open the full derivation <i data-lucide="arrow-right" aria-hidden="true"></i>
         </button>
-      </div>
-    `;
+      </section>
+    `);
 
     container.appendChild(wrap);
 
-    const jumpTheory = wrap.querySelector('#btn-jump-theory');
-    if (jumpTheory) {
-      jumpTheory.addEventListener('click', () => {
-        document.querySelector('[data-tab="theory"]').click();
-      });
-    }
+    const jump = wrap.querySelector('#btn-jump-theory');
+    if (jump) jump.addEventListener('click', () => this.selectTab('theory'));
   }
 
-  // ==========================================
-  // TAB 2: FIRST-PRINCIPLES THEORY
-  // ==========================================
   renderTheoryTab(container, video) {
     const wrap = document.createElement('div');
-    const derivation = moduleDerivations[video.moduleId] || moduleDerivations['module-1'];
+    wrap.className = 'lesson-page theory-page';
+    const deep = deepContentByIndex[video.index];
+    const mod = this.getModule(video.moduleId);
+    const moduleDeriv = moduleDerivations[video.moduleId] || moduleDerivations['module-1'];
+    const d = deep ? deep.derivation : null;
+
+    const derivationBlock = d ? `
+      <section class="section-card">
+        <h2 class="section-heading"><i data-lucide="git-merge" aria-hidden="true"></i> Starting axioms</h2>
+        <p class="section-lede">Everything below follows from these. If one of them fails, the conclusion can fail with it.</p>
+        <ol class="axiom-list">
+          ${d.axioms.map(a => `<li><div>${this.renderTextWithMath(a)}</div></li>`).join('')}
+        </ol>
+      </section>
+
+      <section class="section-card">
+        <h2 class="section-heading"><i data-lucide="list-ordered" aria-hidden="true"></i> Derivation, step by step</h2>
+        <ol class="derivation-steps">
+          ${d.steps.map((s, i) => `
+            <li class="derivation-step">
+              <span class="step-num" aria-hidden="true">${i + 1}</span>
+              <div>
+                <h3 class="step-title">${this.renderTextWithMath(s.title)}</h3>
+                <p>${this.renderTextWithMath(s.body)}</p>
+              </div>
+            </li>
+          `).join('')}
+        </ol>
+      </section>
+
+      <section class="result-box" aria-label="Key result">
+        <span class="result-label">Result</span>
+        <div class="result-body">${this.renderTextWithMath(d.result)}</div>
+      </section>
+
+      <section class="section-card break-card">
+        <h2 class="section-heading"><i data-lucide="alert-triangle" aria-hidden="true"></i> Where the assumptions break</h2>
+        <p>${this.renderTextWithMath(d.assumptionsBreak)}</p>
+      </section>
+    ` : `
+      <section class="section-card">
+        <p class="section-lede">A video-specific derivation for this lesson is still being written. The module-level derivation below covers the same ideas.</p>
+      </section>
+    `;
 
     wrap.innerHTML = `
-      <div class="bam-banner">
-        <span class="bam-badge-large">BAM!</span>
-        <div class="bam-text">
-          <p>${video.bamIntuition}</p>
-        </div>
-      </div>
+      <header class="lesson-intro">
+        <p class="eyebrow">Theory · #${video.index} · ${escapeHtml(mod ? mod.title : '')}</p>
+        <h2 class="lesson-title">${escapeHtml(video.shortTitle)}</h2>
+        <p class="section-lede">${this.renderTextWithMath(video.firstPrinciples)}</p>
+      </header>
 
-      <div class="section-card">
-        <h3><i data-lucide="book-open"></i> First-Principles Mathematical Foundation</h3>
-        <p>${this.renderTextWithMath(video.firstPrinciples)}</p>
-      </div>
+      ${derivationBlock}
 
-      <div class="section-card">
-        <h3><i data-lucide="git-merge"></i> ${derivation.title}</h3>
-        <p>Statistical reasoning built from foundational probability axioms to eliminate black-box leaps:</p>
-        <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 14px;">
-          ${derivation.steps.map(s => `
-            <div style="background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 14px 16px;">
-              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
-                <span style="background: var(--accent-primary); color: var(--accent-contrast); font-weight: 800; font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; font-family: var(--font-mono);">STEP ${s.step}</span>
-                <strong style="font-size: 0.88rem;">${s.title}</strong>
-              </div>
-              <p style="font-size: 0.84rem; color: var(--text-secondary); margin: 0; line-height: 1.5;">${this.renderTextWithMath(s.content)}</p>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-
-      <div class="section-card">
-        <h3><i data-lucide="cpu"></i> Mathematical Formulation & Formulas</h3>
+      <section class="section-card">
+        <h2 class="section-heading"><i data-lucide="cpu" aria-hidden="true"></i> Formulas</h2>
         <div class="formulas-list">
           ${video.mathFormulas.map(f => `
-            <div class="formula-block">
-              <div class="formula-name">${f.name}</div>
+            <figure class="formula-block">
+              <figcaption class="formula-name">${escapeHtml(f.name)}</figcaption>
               <div class="formula-math">${this.renderMath(f.latex, true)}</div>
-              <div class="formula-expl">${this.renderTextWithMath(f.explanation)}</div>
-            </div>
+              <p class="formula-expl">${this.renderTextWithMath(f.explanation)}</p>
+            </figure>
           `).join('')}
         </div>
-      </div>
+      </section>
 
-      <div class="section-card">
-        <h3><i data-lucide="hash"></i> Step-by-Step Worked Numerical Walkthrough</h3>
+      <section class="section-card">
+        <h2 class="section-heading"><i data-lucide="hash" aria-hidden="true"></i> Worked numerical example</h2>
         <div class="numerical-box">
           <p>${this.renderTextWithMath(video.numericalExample)}</p>
         </div>
-      </div>
+      </section>
 
-      <div class="section-card">
-        <h3><i data-lucide="alert-triangle"></i> Common Pitfalls & Traps</h3>
+      <section class="section-card">
+        <h2 class="section-heading"><i data-lucide="alert-triangle" aria-hidden="true"></i> Common pitfalls</h2>
         <div class="pitfall-box">
           <p>${this.renderTextWithMath(video.pitfalls)}</p>
         </div>
-      </div>
+      </section>
+
+      <details class="section-card foundation-details">
+        <summary>
+          <span class="section-heading"><i data-lucide="layers" aria-hidden="true"></i> Module foundation: ${escapeHtml(moduleDeriv.title)}</span>
+        </summary>
+        <ol class="derivation-steps">
+          ${moduleDeriv.steps.map(s => `
+            <li class="derivation-step">
+              <span class="step-num" aria-hidden="true">${s.step}</span>
+              <div>
+                <h3 class="step-title">${this.renderTextWithMath(s.title)}</h3>
+                <p>${this.renderTextWithMath(s.content)}</p>
+              </div>
+            </li>
+          `).join('')}
+        </ol>
+      </details>
     `;
 
     container.appendChild(wrap);
+    this.refreshIcons();
   }
 
-  // ==========================================
-  // TAB 3: 3D SPATIAL STUDIO
-  // ==========================================
   renderInteractive3DTab(container, video) {
     const wrap = document.createElement('div');
     wrap.className = 'three-studio-card';
 
-    // Decide initial 3D mode
-    let defaultMode = 'normal3d';
-    if (['least_squares_line'].includes(video.interactiveType)) {
-      defaultMode = 'lossBowl';
-    } else if (['regression3d', 'r_squared', 'regression_intro', 'multiple_r', 'linear_models_anova'].includes(video.interactiveType)) {
-      defaultMode = 'regression3d';
-    } else if (['mle3d', 'mle_exp', 'mle_binom', 'mle_norm'].includes(video.interactiveType)) {
-      defaultMode = 'mle3d';
-    } else if (['cov3d', 'covariance'].includes(video.interactiveType)) {
-      defaultMode = 'cov3d';
-    }
+    const defaultMode = SCENE_FOR_TYPE[video.interactiveType] || 'normal3d';
+    const exact = Boolean(SCENE_FOR_TYPE[video.interactiveType]);
 
     wrap.innerHTML = `
       <div class="three-toolbar">
         <div class="three-controls-row">
-          <label style="font-weight: 600; font-size: 0.88rem;">3D Spatial Scene:</label>
+          <label for="three-mode-select" class="control-title">3D scene</label>
           <select id="three-mode-select" class="lab-select">
-            <option value="normal3d" ${defaultMode === 'normal3d' ? 'selected' : ''}>3D Gaussian Bell & Slicing Manifold</option>
-            <option value="regression3d" ${defaultMode === 'regression3d' ? 'selected' : ''}>3D Multiple Regression Plane & Residuals</option>
-            <option value="lossBowl" ${defaultMode === 'lossBowl' ? 'selected' : ''}>3D Least Squares Loss Paraboloid (Bowl)</option>
-            <option value="mle3d" ${defaultMode === 'mle3d' ? 'selected' : ''}>3D Maximum Likelihood Landscape</option>
-            <option value="cov3d" ${defaultMode === 'cov3d' ? 'selected' : ''}>3D Covariance Ellipsoid & Data Cloud</option>
+            <option value="normal3d" ${defaultMode === 'normal3d' ? 'selected' : ''}>${SCENE_NAMES.normal3d}</option>
+            <option value="regression3d" ${defaultMode === 'regression3d' ? 'selected' : ''}>${SCENE_NAMES.regression3d}</option>
+            <option value="lossBowl" ${defaultMode === 'lossBowl' ? 'selected' : ''}>${SCENE_NAMES.lossBowl}</option>
+            <option value="mle3d" ${defaultMode === 'mle3d' ? 'selected' : ''}>${SCENE_NAMES.mle3d}</option>
+            <option value="cov3d" ${defaultMode === 'cov3d' ? 'selected' : ''}>${SCENE_NAMES.cov3d}</option>
           </select>
+          ${exact ? '' : '<span class="scene-note">Closest 3D scene for this topic.</span>'}
         </div>
         <div class="three-controls-row" id="three-dynamic-controls"></div>
       </div>
-      <div class="three-viewport-container" id="three-viewport">
+      <div class="three-viewport-container" id="three-viewport" role="img" aria-label="Interactive 3D scene. Drag to orbit, scroll to zoom, right-drag to pan.">
         <div class="three-instructions-overlay">
-          <i data-lucide="move-3d"></i> Click & Drag to Orbit Camera | Scroll to Zoom | Right Click to Pan
+          <i data-lucide="move-3d" aria-hidden="true"></i> Drag to orbit · Scroll to zoom · Right-drag to pan
         </div>
       </div>
     `;
@@ -671,185 +750,121 @@ class StatQuestApp {
     const modeSelect = wrap.querySelector('#three-mode-select');
     const dynamicControls = wrap.querySelector('#three-dynamic-controls');
 
+    const slider = (id, label, min, max, step, value, decimals = 1) => `
+      <div class="control-group">
+        <label for="${id}">${label} <output id="${id}-out" class="highlight-val" for="${id}">${Number(value).toFixed(decimals)}</output></label>
+        <input type="range" id="${id}" min="${min}" max="${max}" value="${value}" step="${step}">
+      </div>`;
+
+    const bindSliders = (ids, decimals, onChange) => {
+      const refresh = () => {
+        ids.forEach(id => {
+          const el = dynamicControls.querySelector(`#${id}`);
+          dynamicControls.querySelector(`#${id}-out`).textContent = Number(el.value).toFixed(decimals);
+        });
+        onChange(Object.fromEntries(ids.map(id => [id, parseFloat(dynamicControls.querySelector(`#${id}`).value)])));
+      };
+      ids.forEach(id => dynamicControls.querySelector(`#${id}`).addEventListener('input', refresh));
+      refresh();
+    };
+
     const updateControlsAndRender = () => {
       const mode = modeSelect.value;
       dynamicControls.innerHTML = '';
 
       if (mode === 'normal3d') {
         dynamicControls.innerHTML = `
+          ${slider('slider-rho', 'Correlation ρ', -0.9, 0.9, 0.1, 0.0)}
           <div class="control-group">
-            <label>\\(\\rho\\) (Corr): <span id="val-rho" class="highlight-val">0.0</span></label>
-            <input type="range" id="slider-rho" min="-0.9" max="0.9" value="0.0" step="0.1">
-          </div>
-          <div class="control-group">
-            <label>Slice X: <span id="val-slice" class="highlight-val">Off</span></label>
-            <input type="range" id="slider-slice" min="-4" max="4" value="0" step="0.5">
-            <input type="checkbox" id="chk-slice">
-          </div>
-        `;
-        const sRho = dynamicControls.querySelector('#slider-rho');
-        const vRho = dynamicControls.querySelector('#val-rho');
-        const sSlice = dynamicControls.querySelector('#slider-slice');
-        const vSlice = dynamicControls.querySelector('#val-slice');
-        const chkSlice = dynamicControls.querySelector('#chk-slice');
-
-        const refreshNormal = () => {
-          const rho = parseFloat(sRho.value);
-          vRho.textContent = rho.toFixed(1);
-          const slicePos = chkSlice.checked ? parseFloat(sSlice.value) : null;
-          vSlice.textContent = chkSlice.checked ? sSlice.value : 'Off';
-          this.threeStudio.renderNormal3D({ muX: 0, muY: 0, sigmaX: 2.0, sigmaY: 2.0, rho, slicePos });
+            <label class="check-label"><input type="checkbox" id="chk-slice"> Show slice at x</label>
+            ${slider('slider-slice', 'Slice position x', -4, 4, 0.5, 0, 1)}
+          </div>`;
+        const chk = dynamicControls.querySelector('#chk-slice');
+        const sliceEl = dynamicControls.querySelector('#slider-slice');
+        const render = (v) => {
+          this.threeStudio.renderNormal3D({
+            muX: 0, muY: 0, sigmaX: 2.0, sigmaY: 2.0,
+            rho: v['slider-rho'],
+            slicePos: chk.checked ? v['slider-slice'] : null
+          });
         };
-
-        sRho.addEventListener('input', refreshNormal);
-        sSlice.addEventListener('input', refreshNormal);
-        chkSlice.addEventListener('change', refreshNormal);
-        refreshNormal();
+        const refresh = () => {
+          dynamicControls.querySelector('#slider-rho-out').textContent = parseFloat(dynamicControls.querySelector('#slider-rho').value).toFixed(1);
+          sliceEl.disabled = !chk.checked;
+          render({ 'slider-rho': parseFloat(dynamicControls.querySelector('#slider-rho').value), 'slider-slice': parseFloat(sliceEl.value) });
+        };
+        dynamicControls.querySelector('#slider-rho').addEventListener('input', refresh);
+        sliceEl.addEventListener('input', refresh);
+        chk.addEventListener('change', refresh);
+        refresh();
 
       } else if (mode === 'regression3d') {
         dynamicControls.innerHTML = `
-          <div class="control-group">
-            <label>\\(\\beta_1\\) (X1 Slope): <span id="val-b1" class="highlight-val">1.2</span></label>
-            <input type="range" id="slider-b1" min="-2.0" max="3.0" value="1.2" step="0.1">
-          </div>
-          <div class="control-group">
-            <label>\\(\\beta_2\\) (X2 Slope): <span id="val-b2" class="highlight-val">-0.8</span></label>
-            <input type="range" id="slider-b2" min="-2.0" max="2.0" value="-0.8" step="0.1">
-          </div>
-        `;
-        const sB1 = dynamicControls.querySelector('#slider-b1');
-        const sB2 = dynamicControls.querySelector('#slider-b2');
-        const vB1 = dynamicControls.querySelector('#val-b1');
-        const vB2 = dynamicControls.querySelector('#val-b2');
-
-        const refreshReg = () => {
-          const b1 = parseFloat(sB1.value);
-          const b2 = parseFloat(sB2.value);
-          vB1.textContent = b1.toFixed(1);
-          vB2.textContent = b2.toFixed(1);
-          this.threeStudio.renderRegression3D({ beta0: 2.0, beta1: b1, beta2: b2, showResiduals: true, showLossBowl: false });
-        };
-
-        sB1.addEventListener('input', refreshReg);
-        sB2.addEventListener('input', refreshReg);
-        refreshReg();
+          ${slider('slider-b1', 'β₁ (X₁ slope)', -2.0, 3.0, 0.1, 1.2)}
+          ${slider('slider-b2', 'β₂ (X₂ slope)', -2.0, 2.0, 0.1, -0.8)}`;
+        bindSliders(['slider-b1', 'slider-b2'], 1, v => {
+          this.threeStudio.renderRegression3D({ beta0: 2.0, beta1: v['slider-b1'], beta2: v['slider-b2'], showResiduals: true, showLossBowl: false });
+        });
 
       } else if (mode === 'lossBowl') {
         dynamicControls.innerHTML = `
+          ${slider('slider-b1', 'Candidate β₁', -1.0, 3.0, 0.1, 1.2)}
+          ${slider('slider-b2', 'Candidate β₂', -2.0, 1.0, 0.1, -0.8)}
           <div class="control-group">
-            <label>Candidate \\(\\beta_1\\): <span id="val-b1" class="highlight-val">1.2</span></label>
-            <input type="range" id="slider-b1" min="-1.0" max="3.0" value="1.2" step="0.1">
-          </div>
-          <div class="control-group">
-            <label>Candidate \\(\\beta_2\\): <span id="val-b2" class="highlight-val">-0.8</span></label>
-            <input type="range" id="slider-b2" min="-2.0" max="1.0" value="-0.8" step="0.1">
-          </div>
-          <div class="control-group">
-            <button id="btn-ols-solve" class="btn btn-primary btn-sm">Solve Global Minimum</button>
-          </div>
-        `;
-        const sB1 = dynamicControls.querySelector('#slider-b1');
-        const sB2 = dynamicControls.querySelector('#slider-b2');
-        const vB1 = dynamicControls.querySelector('#val-b1');
-        const vB2 = dynamicControls.querySelector('#val-b2');
-        const btnSolve = dynamicControls.querySelector('#btn-ols-solve');
-
-        const refreshLoss = () => {
-          const b1Val = parseFloat(sB1.value);
-          const b2Val = parseFloat(sB2.value);
-          vB1.textContent = b1Val.toFixed(1);
-          vB2.textContent = b2Val.toFixed(1);
-          this.threeStudio.renderRegression3D({ beta0: 2.0, beta1: b1Val, beta2: b2Val, showResiduals: false, showLossBowl: true });
-        };
-
-        sB1.addEventListener('input', refreshLoss);
-        sB2.addEventListener('input', refreshLoss);
-        btnSolve.addEventListener('click', () => {
-          sB1.value = 1.2;
-          sB2.value = -0.8;
-          refreshLoss();
+            <button id="btn-ols-solve" class="btn btn-primary btn-sm" type="button">Jump to the OLS minimum</button>
+          </div>`;
+        const b1 = dynamicControls.querySelector('#slider-b1');
+        const b2 = dynamicControls.querySelector('#slider-b2');
+        bindSliders(['slider-b1', 'slider-b2'], 1, v => {
+          this.threeStudio.renderRegression3D({ beta0: 2.0, beta1: v['slider-b1'], beta2: v['slider-b2'], showResiduals: false, showLossBowl: true });
         });
-        refreshLoss();
+        dynamicControls.querySelector('#btn-ols-solve').addEventListener('click', () => {
+          b1.value = 1.2;
+          b2.value = -0.8;
+          b1.dispatchEvent(new Event('input'));
+        });
 
       } else if (mode === 'mle3d') {
         dynamicControls.innerHTML = `
-          <div class="control-group">
-            <label>Candidate \\(\\mu\\): <span id="val-mle-mu" class="highlight-val">0.0</span></label>
-            <input type="range" id="slider-mle-mu" min="-2.0" max="2.0" value="0.0" step="0.1">
-          </div>
-          <div class="control-group">
-            <label>Candidate \\(\\sigma\\): <span id="val-mle-sig" class="highlight-val">1.5</span></label>
-            <input type="range" id="slider-mle-sig" min="0.6" max="3.0" value="1.5" step="0.1">
-          </div>
-        `;
-        const sMu = dynamicControls.querySelector('#slider-mle-mu');
-        const sSig = dynamicControls.querySelector('#slider-mle-sig');
-        const vMu = dynamicControls.querySelector('#val-mle-mu');
-        const vSig = dynamicControls.querySelector('#val-mle-sig');
-
-        const refreshMLE = () => {
-          const mu = parseFloat(sMu.value);
-          const sig = parseFloat(sSig.value);
-          vMu.textContent = mu.toFixed(1);
-          vSig.textContent = sig.toFixed(1);
-          this.threeStudio.renderMLE3D({ candidateMu: mu, candidateSigma: sig });
-        };
-
-        sMu.addEventListener('input', refreshMLE);
-        sSig.addEventListener('input', refreshMLE);
-        refreshMLE();
+          ${slider('slider-mle-mu', 'Candidate μ', -2.0, 2.0, 0.1, 0.0)}
+          ${slider('slider-mle-sig', 'Candidate σ', 0.6, 3.0, 0.1, 1.5)}`;
+        bindSliders(['slider-mle-mu', 'slider-mle-sig'], 1, v => {
+          this.threeStudio.renderMLE3D({ candidateMu: v['slider-mle-mu'], candidateSigma: v['slider-mle-sig'] });
+        });
 
       } else if (mode === 'cov3d') {
         dynamicControls.innerHTML = `
-          <div class="control-group">
-            <label>Correlation \\(\\rho_{XY}\\): <span id="val-cov" class="highlight-val">0.70</span></label>
-            <input type="range" id="slider-cov" min="-0.95" max="0.95" value="0.70" step="0.05">
-          </div>
-        `;
-        const sCov = dynamicControls.querySelector('#slider-cov');
-        const vCov = dynamicControls.querySelector('#val-cov');
-
-        const refreshCov = () => {
-          const r = parseFloat(sCov.value);
-          vCov.textContent = r.toFixed(2);
-          this.threeStudio.renderCovariance3D({ rhoXY: r, rhoXZ: 0.3, rhoYZ: 0.2 });
-        };
-
-        sCov.addEventListener('input', refreshCov);
-        refreshCov();
+          ${slider('slider-cov', 'Correlation ρ_XY', -0.95, 0.95, 0.05, 0.70, 2)}`;
+        bindSliders(['slider-cov'], 2, v => {
+          this.threeStudio.renderCovariance3D({ rhoXY: v['slider-cov'], rhoXZ: 0.3, rhoYZ: 0.2 });
+        });
       }
+      this.refreshIcons();
     };
 
     modeSelect.addEventListener('change', updateControlsAndRender);
     updateControlsAndRender();
   }
 
-  // ==========================================
-  // TAB 4: 2D SIMULATION LAB
-  // ==========================================
   renderInteractive2DTab(container, video) {
     const wrap = document.createElement('div');
+    wrap.className = 'lab-page';
     container.appendChild(wrap);
     this.interactive2D = new Interactive2D(wrap, video.interactiveType);
   }
 
-  // ==========================================
-  // TAB 5: PYODIDE & R CODE LAB
-  // ==========================================
   renderCodeTab(container, video) {
     const wrap = document.createElement('div');
     wrap.className = 'code-tabs-wrapper';
 
     wrap.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
-        <div style="display: flex; gap: 8px;">
-          <button class="btn btn-primary btn-sm code-switch-btn active" data-lang="python">
-            <i data-lucide="terminal"></i> Interactive Python (Pyodide Wasm Sandbox)
-          </button>
-          <button class="btn btn-secondary btn-sm code-switch-btn" data-lang="r">
-            <i data-lucide="code"></i> R Code (Base & Stats)
-          </button>
-        </div>
+      <div class="segmented" role="group" aria-label="Choose language">
+        <button class="segment code-switch-btn active" data-lang="python" type="button" aria-pressed="true">
+          <i data-lucide="terminal" aria-hidden="true"></i> Python · Pyodide
+        </button>
+        <button class="segment code-switch-btn" data-lang="r" type="button" aria-pressed="false">
+          <i data-lucide="code" aria-hidden="true"></i> R
+        </button>
       </div>
       <div id="code-panel-mount"></div>
     `;
@@ -861,11 +876,9 @@ class StatQuestApp {
 
     const renderMode = (lang) => {
       switchBtns.forEach(btn => {
-        if (btn.dataset.lang === lang) {
-          btn.className = 'btn btn-primary btn-sm code-switch-btn active';
-        } else {
-          btn.className = 'btn btn-secondary btn-sm code-switch-btn';
-        }
+        const on = btn.dataset.lang === lang;
+        btn.classList.toggle('active', on);
+        btn.setAttribute('aria-pressed', String(on));
       });
 
       mount.innerHTML = '';
@@ -875,16 +888,16 @@ class StatQuestApp {
         const rBox = document.createElement('div');
         rBox.className = 'section-card';
         rBox.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
+          <div class="code-card-head">
+            <div class="code-card-title">
               <span class="badge badge-primary">R 4.x</span>
-              <strong style="font-size: 0.95rem;">R Statistical Implementation</strong>
+              <strong>R statistical implementation</strong>
             </div>
-            <button class="btn btn-secondary btn-sm" id="btn-copy-r-code">
-              <i data-lucide="copy"></i> Copy R Script
+            <button class="btn btn-secondary btn-sm" id="btn-copy-r-code" type="button">
+              <i data-lucide="copy" aria-hidden="true"></i> Copy R script
             </button>
           </div>
-          <pre style="background: #000; color: #f4f4f5; padding: 18px; border-radius: 6px; font-family: var(--font-mono); font-size: 0.85rem; line-height: 1.5; overflow-x: auto; border: 1px solid var(--border-color);"><code>${video.rCode}</code></pre>
+          <pre class="code-block" tabindex="0" aria-label="R code"><code>${escapeHtml(video.rCode)}</code></pre>
         `;
         mount.appendChild(rBox);
 
@@ -892,9 +905,9 @@ class StatQuestApp {
         copyBtn.addEventListener('click', async () => {
           try {
             await navigator.clipboard.writeText(video.rCode);
-            copyBtn.innerHTML = `<i data-lucide="check"></i> Copied!`;
+            copyBtn.innerHTML = `<i data-lucide="check" aria-hidden="true"></i> Copied`;
             setTimeout(() => {
-              copyBtn.innerHTML = `<i data-lucide="copy"></i> Copy R Script`;
+              copyBtn.innerHTML = `<i data-lucide="copy" aria-hidden="true"></i> Copy R script`;
               this.refreshIcons();
             }, 1800);
           } catch (err) {
@@ -905,20 +918,14 @@ class StatQuestApp {
       this.refreshIcons();
     };
 
-    switchBtns.forEach(b => {
-      b.addEventListener('click', () => renderMode(b.dataset.lang));
-    });
-
+    switchBtns.forEach(b => b.addEventListener('click', () => renderMode(b.dataset.lang)));
     renderMode('python');
   }
 
-  // ==========================================
-  // TAB 6: QUIZ & SELF-CHECK
-  // ==========================================
   renderQuizTab(container, video) {
     const wrap = document.createElement('div');
     container.appendChild(wrap);
-    renderQuiz(wrap, video.quiz, video.id, (qIdx, isCorrect) => {
+    renderQuiz(wrap, this.getQuestions(video), video.id, (qIdx, isCorrect) => {
       if (isCorrect) {
         this.completedVideos.add(video.index);
         localStorage.setItem('statquest_completed_videos', JSON.stringify([...this.completedVideos]));
@@ -929,13 +936,17 @@ class StatQuestApp {
     });
   }
 
-  // Cheatsheet View
   openCheatsheet() {
     const container = document.getElementById('content-body');
     if (!container) return;
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('header-video-title').textContent = 'StatQuest Statistics Fundamentals Cheatsheet';
-    document.title = 'Complete Cheatsheet - StatQuest Interactive';
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-selected', 'false');
+      b.tabIndex = -1;
+    });
+    document.getElementById('header-eyebrow').textContent = 'Reference';
+    document.getElementById('header-video-title').textContent = 'Statistics cheatsheet';
+    document.title = 'Cheatsheet · StatQuest Interactive';
     container.innerHTML = '';
     renderCheatSheet(container);
     this.refreshIcons();
@@ -943,7 +954,6 @@ class StatQuestApp {
   }
 }
 
-// Bootstrap on DOM load
 window.addEventListener('DOMContentLoaded', () => {
   window.app = new StatQuestApp();
 });

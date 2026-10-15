@@ -11,13 +11,13 @@ A comprehensive, first-principles interactive learning platform built for the **
 Every single video is paired with:
 1. **Embedded YouTube Video Player** (with direct playlist links and timestamp shortcuts).
 2. **"BAM!" Core Intuition**: Josh Starmer's signature visual mental model.
-3. **Rigorous First-Principles Derivation**: Axiomatic proofs, continuous vs discrete analysis, and mathematical foundations.
+3. **First-Principles Derivation (per video)**: Starting axioms, a numbered step-by-step derivation, a boxed result, and a section on where the assumptions break. Each module also has a module-level foundation.
 4. **Formal KaTeX LaTeX Formulations**: Typeset equations for probability densities, expectations, variances, and estimators.
 5. **Step-by-Step Worked Numerical Walkthrough**: Exact numbers illustrating how the math works out by hand.
 6. **3D Interactive WebGL Spatial Studios**: Rotating 3D Gaussian bells, multiple regression planes, loss paraboloids, and maximum likelihood manifolds built from scratch with Three.js.
 7. **2D Simulation Labs**: Monte Carlo simulations of the Central Limit Theorem, Bessel's correction, statistical power, Q-Q plots, and bootstrapping.
 8. **Reproducible Python & R Code**: Copy-ready snippets utilizing NumPy, SciPy, Statsmodels, and base R.
-9. **Knowledge Check Quizzes**: Interactive self-tests with detailed feedback on misconceptions and traps.
+9. **Knowledge Check Quizzes**: Eight questions per video (three core plus five derivation-focused), with explanations of misconceptions and traps.
 10. **Printable Cheatsheet**: Quick-reference guide covering decision matrices and formulas.
 
 ---

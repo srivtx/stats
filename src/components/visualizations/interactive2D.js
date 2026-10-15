@@ -4,6 +4,8 @@
  * Comprehensive Canvas & Dynamic SVG interactive simulators covering all 62 curriculum topics.
  */
 
+import { C } from '../palette.js';
+
 export class Interactive2D {
   constructor(containerElement, type, options = {}) {
     this.container = containerElement;
@@ -257,7 +259,7 @@ export class Interactive2D {
 
       const maxBin = Math.max(1, ...bins);
 
-      ctx.strokeStyle = '#334155';
+      ctx.strokeStyle = C.grid;
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(padL, padT);
@@ -273,16 +275,16 @@ export class Interactive2D {
         const yPix = (H - padB) - barH;
 
         const grad = ctx.createLinearGradient(0, yPix, 0, H - padB);
-        grad.addColorStop(0, '#38bdf8');
-        grad.addColorStop(1, '#1e3a8a');
+        grad.addColorStop(0, C.ink);
+        grad.addColorStop(1, C.grid);
 
         ctx.fillStyle = grad;
         ctx.fillRect(xPix, yPix, Math.max(1, barW), barH);
-        ctx.strokeStyle = '#0284c7';
+        ctx.strokeStyle = C.ink;
         ctx.strokeRect(xPix, yPix, Math.max(1, barW), barH);
       }
 
-      ctx.fillStyle = '#94a3b8';
+      ctx.fillStyle = C.muted;
       ctx.font = '11px system-ui';
       ctx.textAlign = 'center';
       for (let val = 60; val <= 160; val += 20) {
@@ -297,7 +299,7 @@ export class Interactive2D {
 
       if (showKDE) {
         const bandwidth = 6;
-        ctx.strokeStyle = '#f59e0b';
+        ctx.strokeStyle = C.c3;
         ctx.lineWidth = 3;
         ctx.beginPath();
 
@@ -355,9 +357,9 @@ export class Interactive2D {
         </div>
       </div>
       <div class="clt-readout">
-        <span>Cumulative Area \\(P(X \\le x)\\): <strong id="pdf-prob" style="color: #38bdf8;">0.8413</strong></span>
-        <span>CDF Value \\(F(x)\\): <strong id="cdf-val" style="color: #10b981;">0.8413</strong></span>
-        <span>PDF Height \\(f(x)\\): <strong id="pdf-dens" style="color: #f59e0b;">0.2420</strong></span>
+        <span>Cumulative Area \\(P(X \\le x)\\): <strong id="pdf-prob" style="color: var(--chart-ink);">0.8413</strong></span>
+        <span>CDF Value \\(F(x)\\): <strong id="cdf-val" style="color: var(--chart-2);">0.8413</strong></span>
+        <span>PDF Height \\(f(x)\\): <strong id="pdf-dens" style="color: var(--chart-3);">0.2420</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="pdf-canvas" width="700" height="340"></canvas>
@@ -414,7 +416,7 @@ export class Interactive2D {
       const minX = -4.5, maxX = 4.5;
 
       // Draw Shaded PDF Area up to x
-      ctx.fillStyle = 'rgba(56, 189, 248, 0.25)';
+      ctx.fillStyle = C.a(0.25);
       ctx.beginPath();
       const startX = padL;
       ctx.moveTo(startX, H - padB);
@@ -432,7 +434,7 @@ export class Interactive2D {
       ctx.fill();
 
       // Draw PDF Curve (Cyan)
-      ctx.strokeStyle = '#38bdf8';
+      ctx.strokeStyle = C.ink;
       ctx.lineWidth = 3;
       ctx.beginPath();
       for (let px = 0; px <= plotW; px += 2) {
@@ -446,7 +448,7 @@ export class Interactive2D {
       ctx.stroke();
 
       // Draw CDF Curve (Green S-curve)
-      ctx.strokeStyle = '#10b981';
+      ctx.strokeStyle = C.c2;
       ctx.lineWidth = 2.5;
       ctx.setLineDash([5, 3]);
       ctx.beginPath();
@@ -462,7 +464,7 @@ export class Interactive2D {
       ctx.setLineDash([]);
 
       // Vertical threshold marker at x
-      ctx.strokeStyle = '#f59e0b';
+      ctx.strokeStyle = C.c3;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(xCutPix, padT);
@@ -471,20 +473,20 @@ export class Interactive2D {
 
       // Dot on CDF curve
       const cdfYPix = (H - padB) - cdf * (plotH - 20);
-      ctx.fillStyle = '#10b981';
+      ctx.fillStyle = C.c2;
       ctx.beginPath();
       ctx.arc(xCutPix, cdfYPix, 6, 0, 2 * Math.PI);
       ctx.fill();
 
       // Labels
-      ctx.fillStyle = '#38bdf8';
+      ctx.fillStyle = C.ink;
       ctx.font = 'bold 11px system-ui';
       ctx.fillText('PDF Curve f(x)', padL + 60, padT + 20);
 
-      ctx.fillStyle = '#10b981';
+      ctx.fillStyle = C.c2;
       ctx.fillText('CDF S-Curve F(x)', padL + 60, padT + 40);
 
-      ctx.fillStyle = '#f59e0b';
+      ctx.fillStyle = C.c3;
       ctx.fillText(`x = ${x.toFixed(1)}`, xCutPix, padT - 8);
     };
 
@@ -508,9 +510,9 @@ export class Interactive2D {
         </div>
       </div>
       <div class="clt-readout">
-        <span>Sample Mean (\\(\\bar{x}\\)): <strong id="ct-mean" style="color: #ef4444;">--</strong></span>
-        <span>Sample Median: <strong id="ct-median" style="color: #10b981;">--</strong></span>
-        <span>Sensitivity to Outlier: <strong id="ct-sens" style="color: #f59e0b;">Mean shifts, Median resists!</strong></span>
+        <span>Sample Mean (\\(\\bar{x}\\)): <strong id="ct-mean" style="color: var(--chart-ink);">--</strong></span>
+        <span>Sample Median: <strong id="ct-median" style="color: var(--chart-2);">--</strong></span>
+        <span>Sensitivity to Outlier: <strong id="ct-sens" style="color: var(--chart-3);">Mean shifts, Median resists!</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="ct-canvas" width="700" height="340"></canvas>
@@ -550,7 +552,7 @@ export class Interactive2D {
 
       // Axis Line
       const axisY = H / 2;
-      ctx.strokeStyle = '#334155';
+      ctx.strokeStyle = C.grid;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(padL, axisY);
@@ -562,12 +564,12 @@ export class Interactive2D {
         const xPix = padL + ((pt - minX) / (maxX - minX)) * plotW;
         const isOutlier = pt === outlier;
 
-        ctx.fillStyle = isOutlier ? '#f59e0b' : '#38bdf8';
+        ctx.fillStyle = isOutlier ? C.c3 : C.ink;
         ctx.beginPath();
         ctx.arc(xPix, axisY, isOutlier ? 8 : 6, 0, 2 * Math.PI);
         ctx.fill();
 
-        ctx.fillStyle = '#94a3b8';
+        ctx.fillStyle = C.muted;
         ctx.font = '10px system-ui';
         ctx.textAlign = 'center';
         ctx.fillText(pt, xPix, axisY + 22);
@@ -575,20 +577,20 @@ export class Interactive2D {
 
       // Mean Indicator Line (Red)
       const meanPix = padL + ((mean - minX) / (maxX - minX)) * plotW;
-      ctx.strokeStyle = '#ef4444';
+      ctx.strokeStyle = C.ink;
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(meanPix, axisY - 60);
       ctx.lineTo(meanPix, axisY + 40);
       ctx.stroke();
 
-      ctx.fillStyle = '#ef4444';
+      ctx.fillStyle = C.ink;
       ctx.font = 'bold 12px system-ui';
       ctx.fillText(`Mean = ${mean.toFixed(1)}`, meanPix, axisY - 70);
 
       // Median Indicator Line (Green)
       const medianPix = padL + ((median - minX) / (maxX - minX)) * plotW;
-      ctx.strokeStyle = '#10b981';
+      ctx.strokeStyle = C.c2;
       ctx.lineWidth = 3;
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
@@ -597,7 +599,7 @@ export class Interactive2D {
       ctx.stroke();
       ctx.setLineDash([]);
 
-      ctx.fillStyle = '#10b981';
+      ctx.fillStyle = C.c2;
       ctx.fillText(`Median = ${median.toFixed(1)}`, medianPix, axisY - 48);
     };
 
@@ -619,8 +621,8 @@ export class Interactive2D {
         </div>
       </div>
       <div class="clt-readout">
-        <span>Mean Waiting Time \\(E[X] = \\frac{1}{\\lambda}\\): <strong id="exp-mean" style="color: #38bdf8;">2.00</strong></span>
-        <span>Half-Life (Median) \\(\\frac{\\ln 2}{\\lambda}\\): <strong id="exp-half" style="color: #10b981;">1.39</strong></span>
+        <span>Mean Waiting Time \\(E[X] = \\frac{1}{\\lambda}\\): <strong id="exp-mean" style="color: var(--chart-ink);">2.00</strong></span>
+        <span>Half-Life (Median) \\(\\frac{\\ln 2}{\\lambda}\\): <strong id="exp-half" style="color: var(--chart-2);">1.39</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="exp-canvas" width="700" height="340"></canvas>
@@ -655,7 +657,7 @@ export class Interactive2D {
       const maxX = 8.0;
 
       // Draw Exponential Curve
-      ctx.strokeStyle = '#38bdf8';
+      ctx.strokeStyle = C.ink;
       ctx.lineWidth = 3;
       ctx.beginPath();
       for (let px = 0; px <= plotW; px += 2) {
@@ -670,7 +672,7 @@ export class Interactive2D {
       // Mean line
       const meanPix = padL + (mean / maxX) * plotW;
       if (meanPix <= w - padR) {
-        ctx.strokeStyle = '#ef4444';
+        ctx.strokeStyle = C.ink;
         ctx.lineWidth = 2;
         ctx.setLineDash([4, 4]);
         ctx.beginPath();
@@ -678,7 +680,7 @@ export class Interactive2D {
         ctx.lineTo(meanPix, H - padB);
         ctx.stroke();
         ctx.setLineDash([]);
-        ctx.fillStyle = '#ef4444';
+        ctx.fillStyle = C.ink;
         ctx.fillText(`Mean = ${mean.toFixed(2)}`, meanPix, padT + 16);
       }
     };
@@ -705,8 +707,8 @@ export class Interactive2D {
       </div>
       <div class="clt-readout">
         <span>True Population Mean (\\(\\mu\\)): <strong>50.00</strong></span>
-        <span>Sample Mean (\\(\\bar{x}\\)): <strong id="pvs-xbar" style="color: #38bdf8;">--</strong></span>
-        <span>Estimation Error: <strong id="pvs-err" style="color: #f59e0b;">--</strong></span>
+        <span>Sample Mean (\\(\\bar{x}\\)): <strong id="pvs-xbar" style="color: var(--chart-ink);">--</strong></span>
+        <span>Estimation Error: <strong id="pvs-err" style="color: var(--chart-3);">--</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="pvs-canvas" width="700" height="340"></canvas>
@@ -752,7 +754,7 @@ export class Interactive2D {
       const minX = 15, maxX = 85;
 
       // Draw True Population Density (Gray)
-      ctx.strokeStyle = '#475569';
+      ctx.strokeStyle = C.grid;
       ctx.lineWidth = 2;
       ctx.beginPath();
       for (let px = 0; px <= plotW; px += 2) {
@@ -768,7 +770,7 @@ export class Interactive2D {
       // Draw sample points along bottom
       pts.forEach(p => {
         const px = padL + ((p - minX) / (maxX - minX)) * plotW;
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.6)';
+        ctx.fillStyle = C.a(0.6);
         ctx.beginPath();
         ctx.arc(px, H - padB - 10, 4, 0, 2 * Math.PI);
         ctx.fill();
@@ -776,7 +778,7 @@ export class Interactive2D {
 
       // True Mean Line (White)
       const truePix = padL + ((trueMu - minX) / (maxX - minX)) * plotW;
-      ctx.strokeStyle = '#ffffff';
+      ctx.strokeStyle = C.ink;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(truePix, padT);
@@ -785,7 +787,7 @@ export class Interactive2D {
 
       // Sample Mean Line (Cyan)
       const xbarPix = padL + ((xbar - minX) / (maxX - minX)) * plotW;
-      ctx.strokeStyle = '#38bdf8';
+      ctx.strokeStyle = C.ink;
       ctx.lineWidth = 3;
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
@@ -815,8 +817,8 @@ export class Interactive2D {
       </div>
       <div class="clt-readout">
         <span>Mean (\\(\\bar{x}\\)): <strong id="var-mean">10.0</strong></span>
-        <span>Sum of Squared Deviations (\\(SS\\)): <strong id="var-ss" style="color: #f59e0b;">--</strong></span>
-        <span>Variance (\\(s^2\\)): <strong id="var-var" style="color: #10b981;">--</strong></span>
+        <span>Sum of Squared Deviations (\\(SS\\)): <strong id="var-ss" style="color: var(--chart-3);">--</strong></span>
+        <span>Variance (\\(s^2\\)): <strong id="var-var" style="color: var(--chart-2);">--</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="var-canvas" width="700" height="340"></canvas>
@@ -859,7 +861,7 @@ export class Interactive2D {
       const axisY = H - 60;
 
       // Axis
-      ctx.strokeStyle = '#334155';
+      ctx.strokeStyle = C.grid;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(padL, axisY);
@@ -874,28 +876,28 @@ export class Interactive2D {
         const diff = Math.abs(x - mean);
         const sqSize = (diff / (maxX - minX)) * plotW;
 
-        ctx.fillStyle = 'rgba(245, 158, 11, 0.2)';
-        ctx.strokeStyle = '#f59e0b';
+        ctx.fillStyle = C.a3(0.2);
+        ctx.strokeStyle = C.c3;
         ctx.lineWidth = 1;
         ctx.fillRect(Math.min(xPix, meanPix), axisY - sqSize, sqSize, sqSize);
         ctx.strokeRect(Math.min(xPix, meanPix), axisY - sqSize, sqSize, sqSize);
 
         // Point
-        ctx.fillStyle = '#38bdf8';
+        ctx.fillStyle = C.ink;
         ctx.beginPath();
         ctx.arc(xPix, axisY, 5, 0, 2 * Math.PI);
         ctx.fill();
       });
 
       // Mean line
-      ctx.strokeStyle = '#ef4444';
+      ctx.strokeStyle = C.ink;
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(meanPix, 20);
       ctx.lineTo(meanPix, axisY + 15);
       ctx.stroke();
 
-      ctx.fillStyle = '#ef4444';
+      ctx.fillStyle = C.ink;
       ctx.font = 'bold 12px system-ui';
       ctx.textAlign = 'center';
       ctx.fillText(`Mean = 10.0`, meanPix, 15);
@@ -922,8 +924,8 @@ export class Interactive2D {
         </div>
       </div>
       <div class="clt-readout">
-        <span>Residual Sum of Squares (\\(SSR\\)): <strong id="mm-ssr" style="color: #ef4444;">--</strong></span>
-        <span>Model Quality: <strong id="mm-verdict" style="color: #10b981;">--</strong></span>
+        <span>Residual Sum of Squares (\\(SSR\\)): <strong id="mm-ssr" style="color: var(--chart-ink);">--</strong></span>
+        <span>Model Quality: <strong id="mm-verdict" style="color: var(--chart-2);">--</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="mm-canvas" width="700" height="340"></canvas>
@@ -970,7 +972,7 @@ export class Interactive2D {
         const pred = mode === 'mean' ? meanY : 1.5 * p.x + 1.2;
         const predYPix = (H - padB) - (pred / 14) * plotH;
 
-        ctx.strokeStyle = '#ef4444';
+        ctx.strokeStyle = C.ink;
         ctx.lineWidth = 2;
         ctx.setLineDash([3, 3]);
         ctx.beginPath();
@@ -979,14 +981,14 @@ export class Interactive2D {
         ctx.stroke();
         ctx.setLineDash([]);
 
-        ctx.fillStyle = '#38bdf8';
+        ctx.fillStyle = C.ink;
         ctx.beginPath();
         ctx.arc(px, py, 6, 0, 2 * Math.PI);
         ctx.fill();
       });
 
       // Draw Model Line
-      ctx.strokeStyle = '#f59e0b';
+      ctx.strokeStyle = C.c3;
       ctx.lineWidth = 3;
       ctx.beginPath();
       if (mode === 'mean') {
@@ -1024,7 +1026,7 @@ export class Interactive2D {
         </div>
       </div>
       <div class="clt-readout">
-        <span>Calculated P-Value: <strong id="ht-pval" style="color: #38bdf8;">--</strong></span>
+        <span>Calculated P-Value: <strong id="ht-pval" style="color: var(--chart-ink);">--</strong></span>
         <span>Decision: <strong id="ht-verdict" style="font-size: 1.1rem;">--</strong></span>
       </div>
       <div class="canvas-wrapper">
@@ -1064,10 +1066,10 @@ export class Interactive2D {
 
       if (twoTailP <= alpha) {
         verdictEl.textContent = `Reject H0 (Statistically Significant!)`;
-        verdictEl.style.color = '#10b981';
+        verdictEl.style.color = C.c2;
       } else {
         verdictEl.textContent = `Fail to Reject H0 (Consistent with Chance)`;
-        verdictEl.style.color = '#ef4444';
+        verdictEl.style.color = C.ink;
       }
 
       const w = canvas.width, H = canvas.height;
@@ -1078,7 +1080,7 @@ export class Interactive2D {
       const minX = -4.0, maxX = 4.0;
 
       // Draw Shaded Tails (|t| >= tobs)
-      ctx.fillStyle = 'rgba(239, 68, 68, 0.4)';
+      ctx.fillStyle = C.a(0.4);
       for (let side of [-1, 1]) {
         ctx.beginPath();
         const startXPix = padL + (((side * tobs) - minX) / (maxX - minX)) * plotW;
@@ -1098,7 +1100,7 @@ export class Interactive2D {
       }
 
       // Draw Null Curve
-      ctx.strokeStyle = '#38bdf8';
+      ctx.strokeStyle = C.ink;
       ctx.lineWidth = 3;
       ctx.beginPath();
       for (let px = 0; px <= plotW; px += 2) {
@@ -1113,7 +1115,7 @@ export class Interactive2D {
       // Markers at +tobs and -tobs
       for (let side of [-1, 1]) {
         const tPix = padL + (((side * tobs) - minX) / (maxX - minX)) * plotW;
-        ctx.strokeStyle = '#f59e0b';
+        ctx.strokeStyle = C.c3;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(tPix, padT);
@@ -1145,8 +1147,8 @@ export class Interactive2D {
         </div>
       </div>
       <div class="clt-readout">
-        <span>Contingency Table Odds Ratio: <strong id="f-or" style="color: #38bdf8;">--</strong></span>
-        <span>Hypergeometric P-Value: <strong id="f-p" style="color: #10b981;">--</strong></span>
+        <span>Contingency Table Odds Ratio: <strong id="f-or" style="color: var(--chart-ink);">--</strong></span>
+        <span>Hypergeometric P-Value: <strong id="f-p" style="color: var(--chart-2);">--</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="f-canvas" width="700" height="340"></canvas>
@@ -1186,7 +1188,7 @@ export class Interactive2D {
       ctx.clearRect(0, 0, w, H);
 
       // Render 2x2 table grid visually
-      ctx.strokeStyle = '#334155';
+      ctx.strokeStyle = C.grid;
       ctx.lineWidth = 2;
       const startX = 150, startY = 60, cellW = 180, cellH = 100;
 
@@ -1198,7 +1200,7 @@ export class Interactive2D {
       ctx.lineTo(startX + cellW * 2, startY + cellH);
       ctx.stroke();
 
-      ctx.fillStyle = '#38bdf8';
+      ctx.fillStyle = C.ink;
       ctx.font = 'bold 24px system-ui';
       ctx.textAlign = 'center';
       ctx.fillText(`Treated / Cured: ${a}`, startX + cellW / 2, startY + cellH / 2 + 8);
@@ -1227,8 +1229,8 @@ export class Interactive2D {
       </div>
       <div class="clt-readout">
         <span>Tests Run: <strong id="phack-total">0</strong></span>
-        <span>Spurious Discoveries (\\(p < 0.05\\)): <strong id="phack-sig" style="color: #ef4444;">0</strong></span>
-        <span>Theoretical False Positive Risk: <strong style="color: #f59e0b;">~64.2%</strong></span>
+        <span>Spurious Discoveries (\\(p < 0.05\\)): <strong id="phack-sig" style="color: var(--chart-ink);">0</strong></span>
+        <span>Theoretical False Positive Risk: <strong style="color: var(--chart-3);">~64.2%</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="phack-canvas" width="700" height="340"></canvas>
@@ -1258,7 +1260,7 @@ export class Interactive2D {
       sigEl.textContent = sigs;
 
       if (total === 0) {
-        ctx.fillStyle = '#64748b';
+        ctx.fillStyle = C.muted;
         ctx.font = '14px system-ui';
         ctx.textAlign = 'center';
         ctx.fillText('Click "Test 20 Random Junk Features" to watch false positives appear by chance!', w / 2, H / 2);
@@ -1270,7 +1272,7 @@ export class Interactive2D {
 
       // Draw Alpha Cutoff Line at 0.05
       const alphaY = (H - padB) - 0.05 * (plotH - 20);
-      ctx.strokeStyle = '#ef4444';
+      ctx.strokeStyle = C.ink;
       ctx.lineWidth = 2;
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
@@ -1279,7 +1281,7 @@ export class Interactive2D {
       ctx.stroke();
       ctx.setLineDash([]);
 
-      ctx.fillStyle = '#ef4444';
+      ctx.fillStyle = C.ink;
       ctx.font = '11px system-ui';
       ctx.fillText('alpha = 0.05 Cutoff', padL + 80, alphaY - 6);
 
@@ -1290,7 +1292,7 @@ export class Interactive2D {
         const barH = p * (plotH - 20);
         const yPix = (H - padB) - barH;
 
-        ctx.fillStyle = p < 0.05 ? '#ef4444' : '#38bdf8';
+        ctx.fillStyle = p < 0.05 ? C.ink : C.ink;
         ctx.fillRect(xPix, yPix, barW, barH);
       });
     };
@@ -1323,8 +1325,8 @@ export class Interactive2D {
       </div>
       <div class="clt-readout">
         <span>Total Hypotheses (\\(m\\)): <strong>25</strong></span>
-        <span>Bonferroni Discoveries: <strong id="fdr-bonf" style="color: #ef4444;">--</strong></span>
-        <span>Benjamini-Hochberg Discoveries: <strong id="fdr-bh-cnt" style="color: #10b981;">--</strong></span>
+        <span>Bonferroni Discoveries: <strong id="fdr-bonf" style="color: var(--chart-ink);">--</strong></span>
+        <span>Benjamini-Hochberg Discoveries: <strong id="fdr-bh-cnt" style="color: var(--chart-2);">--</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="fdr-canvas" width="700" height="340"></canvas>
@@ -1375,7 +1377,7 @@ export class Interactive2D {
       const plotW = w - padL - padR, plotH = H - padT - padB;
 
       // Draw BH Critical Line (Green)
-      ctx.strokeStyle = '#10b981';
+      ctx.strokeStyle = C.c2;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(padL, H - padB);
@@ -1384,7 +1386,7 @@ export class Interactive2D {
 
       // Draw Bonferroni Line (Red flat)
       const bonfY = (H - padB) - bonfCutoff * (plotH - 20) * 10;
-      ctx.strokeStyle = '#ef4444';
+      ctx.strokeStyle = C.ink;
       ctx.lineWidth = 1.5;
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
@@ -1400,7 +1402,7 @@ export class Interactive2D {
         const py = (H - padB) - Math.min(1.0, p) * (plotH - 20);
 
         const isBH = k <= bhCount;
-        ctx.fillStyle = isBH ? '#10b981' : '#38bdf8';
+        ctx.fillStyle = isBH ? C.c2 : C.ink;
         ctx.beginPath();
         ctx.arc(px, py, isBH ? 5 : 3.5, 0, 2 * Math.PI);
         ctx.fill();
@@ -1425,8 +1427,8 @@ export class Interactive2D {
         </div>
       </div>
       <div class="clt-readout">
-        <span>Pearson \\(r\\): <strong id="cov-r-read" style="color: #38bdf8;">0.75</strong></span>
-        <span>Direction: <strong id="cov-dir" style="color: #10b981;">Strong Positive</strong></span>
+        <span>Pearson \\(r\\): <strong id="cov-r-read" style="color: var(--chart-ink);">0.75</strong></span>
+        <span>Direction: <strong id="cov-dir" style="color: var(--chart-2);">Strong Positive</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="cov-canvas" width="700" height="340"></canvas>
@@ -1473,7 +1475,7 @@ export class Interactive2D {
       const plotW = w - padL - padR, plotH = H - padT - padB;
 
       // Draw Axes
-      ctx.strokeStyle = '#334155';
+      ctx.strokeStyle = C.grid;
       ctx.beginPath();
       ctx.moveTo(padL, padT + plotH / 2);
       ctx.lineTo(w - padR, padT + plotH / 2);
@@ -1483,7 +1485,7 @@ export class Interactive2D {
 
       // Transform points: Y = r*Z1 + sqrt(1-r^2)*Z2
       const scale = Math.sqrt(Math.max(0.01, 1 - r * r));
-      ctx.fillStyle = '#38bdf8';
+      ctx.fillStyle = C.ink;
       basePts.forEach(pt => {
         const x = pt.z1;
         const y = r * pt.z1 + scale * pt.z2;
@@ -1497,7 +1499,7 @@ export class Interactive2D {
       });
 
       // Draw Regression Trend Line
-      ctx.strokeStyle = '#f59e0b';
+      ctx.strokeStyle = C.c3;
       ctx.lineWidth = 3;
       ctx.beginPath();
       const x1 = -3.2, y1 = r * x1;
@@ -1530,7 +1532,7 @@ export class Interactive2D {
       </div>
       <div class="clt-readout">
         <span>Intersection \\(P(A \\cap B)\\): <strong id="cp-inter">0.20</strong></span>
-        <span>Conditional Probability \\(P(A \\mid B) = \\frac{P(A \\cap B)}{P(B)}\\): <strong id="cp-cond" style="color: #38bdf8; font-size: 1.1rem;">0.50</strong></span>
+        <span>Conditional Probability \\(P(A \\mid B) = \\frac{P(A \\cap B)}{P(B)}\\): <strong id="cp-cond" style="color: var(--chart-ink); font-size: 1.1rem;">0.50</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="cp-canvas" width="700" height="340"></canvas>
@@ -1566,27 +1568,27 @@ export class Interactive2D {
       ctx.clearRect(0, 0, w, H);
 
       // Circle A
-      ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
+      ctx.fillStyle = C.a(0.4);
       ctx.beginPath();
       ctx.arc(w / 2 - 60, H / 2, 85, 0, 2 * Math.PI);
       ctx.fill();
 
       // Circle B
-      ctx.fillStyle = 'rgba(245, 158, 11, 0.4)';
+      ctx.fillStyle = C.a3(0.4);
       ctx.beginPath();
       ctx.arc(w / 2 + 60, H / 2, 85, 0, 2 * Math.PI);
       ctx.fill();
 
       // Labels
-      ctx.fillStyle = '#38bdf8';
+      ctx.fillStyle = C.ink;
       ctx.font = 'bold 14px system-ui';
       ctx.textAlign = 'center';
       ctx.fillText(`Event A (${pA.toFixed(2)})`, w / 2 - 100, H / 2 - 95);
 
-      ctx.fillStyle = '#f59e0b';
+      ctx.fillStyle = C.c3;
       ctx.fillText(`Event B (${pB.toFixed(2)})`, w / 2 + 100, H / 2 - 95);
 
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = C.ink;
       ctx.fillText(`A ∩ B`, w / 2, H / 2);
     };
 
@@ -1613,7 +1615,7 @@ export class Interactive2D {
         </div>
       </div>
       <div class="clt-readout">
-        <span>Expected Value (Center of Mass) \\(E[X] = \\sum x P(x)\\): <strong id="ev-res" style="color: #38bdf8; font-size: 1.1rem;">3.50</strong></span>
+        <span>Expected Value (Center of Mass) \\(E[X] = \\sum x P(x)\\): <strong id="ev-res" style="color: var(--chart-ink); font-size: 1.1rem;">3.50</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="ev-canvas" width="700" height="340"></canvas>
@@ -1651,7 +1653,7 @@ export class Interactive2D {
       const beamY = H / 2 + 30;
 
       // Draw Beam
-      ctx.strokeStyle = '#38bdf8';
+      ctx.strokeStyle = C.ink;
       ctx.lineWidth = 6;
       ctx.beginPath();
       ctx.moveTo(padL, beamY);
@@ -1660,7 +1662,7 @@ export class Interactive2D {
 
       // Draw Fulcrum triangle at Expected Value
       const fulcrumX = padL + ((ev - 1) / 5) * (w - padL - padR);
-      ctx.fillStyle = '#ef4444';
+      ctx.fillStyle = C.ink;
       ctx.beginPath();
       ctx.moveTo(fulcrumX, beamY);
       ctx.lineTo(fulcrumX - 16, beamY + 36);
@@ -1672,12 +1674,12 @@ export class Interactive2D {
       weights.forEach((wt, idx) => {
         const x = padL + (idx / 5) * (w - padL - padR);
         const radius = Math.max(8, wt * 12);
-        ctx.fillStyle = '#f59e0b';
+        ctx.fillStyle = C.c3;
         ctx.beginPath();
         ctx.arc(x, beamY - radius, radius, 0, 2 * Math.PI);
         ctx.fill();
 
-        ctx.fillStyle = '#94a3b8';
+        ctx.fillStyle = C.muted;
         ctx.font = '12px system-ui';
         ctx.textAlign = 'center';
         ctx.fillText(`x=${idx + 1}`, x, beamY + 54);
@@ -1707,8 +1709,8 @@ export class Interactive2D {
         </div>
       </div>
       <div class="clt-readout">
-        <span>Mean \\(E[K] = np\\): <strong id="binom-mean" style="color: #38bdf8;">10.00</strong></span>
-        <span>Variance \\(np(1-p)\\): <strong id="binom-var" style="color: #10b981;">5.00</strong></span>
+        <span>Mean \\(E[K] = np\\): <strong id="binom-mean" style="color: var(--chart-ink);">10.00</strong></span>
+        <span>Variance \\(np(1-p)\\): <strong id="binom-var" style="color: var(--chart-2);">5.00</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="binom-canvas" width="700" height="340"></canvas>
@@ -1766,7 +1768,7 @@ export class Interactive2D {
         const barH = (prob / (maxP || 1)) * (plotH - 20);
         const yPix = (H - padB) - barH;
 
-        ctx.fillStyle = '#38bdf8';
+        ctx.fillStyle = C.ink;
         ctx.fillRect(xPix, yPix, barW, barH);
       });
     };
@@ -1856,7 +1858,7 @@ export class Interactive2D {
       countEl.textContent = count;
 
       if (count === 0) {
-        ctx.fillStyle = '#64748b';
+        ctx.fillStyle = C.muted;
         ctx.font = '14px system-ui';
         ctx.textAlign = 'center';
         ctx.fillText('Click "Take 1,000 Samples" to simulate the Central Limit Theorem!', w / 2, H / 2);
@@ -1899,11 +1901,11 @@ export class Interactive2D {
         const barH = (bins[i] / maxBin) * (plotH - 25);
         const yPix = (H - padB) - barH;
 
-        ctx.fillStyle = '#10b981';
+        ctx.fillStyle = C.c2;
         ctx.fillRect(xPix, yPix, Math.max(1, barW), barH);
       }
 
-      ctx.strokeStyle = '#f59e0b';
+      ctx.strokeStyle = C.c3;
       ctx.lineWidth = 3;
       ctx.beginPath();
       for (let px = 0; px <= plotW; px += 2) {
@@ -1939,8 +1941,8 @@ export class Interactive2D {
       </div>
       <div class="clt-readout">
         <span>Population Std Dev (\\(\\sigma\\)): <strong>10.0</strong></span>
-        <span>Standard Error \\(SE = \\frac{\\sigma}{\\sqrt{n}}\\): <strong id="ss-se" style="color: #38bdf8;">2.50</strong></span>
-        <span>Precision Gain: <strong id="ss-gain" style="color: #10b981;">Diminishing Returns Zone</strong></span>
+        <span>Standard Error \\(SE = \\frac{\\sigma}{\\sqrt{n}}\\): <strong id="ss-se" style="color: var(--chart-ink);">2.50</strong></span>
+        <span>Precision Gain: <strong id="ss-gain" style="color: var(--chart-2);">Diminishing Returns Zone</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="ss-canvas" width="700" height="340"></canvas>
@@ -1971,7 +1973,7 @@ export class Interactive2D {
       const plotW = w - padL - padR, plotH = H - padT - padB;
 
       // Draw SE Curve vs n in [4, 100]
-      ctx.strokeStyle = '#38bdf8';
+      ctx.strokeStyle = C.ink;
       ctx.lineWidth = 3;
       ctx.beginPath();
       for (let px = 0; px <= plotW; px += 2) {
@@ -1987,7 +1989,7 @@ export class Interactive2D {
       const curXPix = padL + ((n - 4) / 96) * plotW;
       const curYPix = (H - padB) - (se / 5.0) * (plotH - 20);
 
-      ctx.fillStyle = '#f59e0b';
+      ctx.fillStyle = C.c3;
       ctx.beginPath();
       ctx.arc(curXPix, curYPix, 7, 0, 2 * Math.PI);
       ctx.fill();
@@ -2011,8 +2013,8 @@ export class Interactive2D {
         </div>
       </div>
       <div class="clt-readout">
-        <span>Standard Deviation (\\(s\\)): <strong style="color: #38bdf8;">10.0 (Constant Spread of Individuals)</strong></span>
-        <span>Standard Error (\\(SE\\)): <strong id="sdse-se" style="color: #10b981;">2.00 (Narrow Uncertainty in Mean)</strong></span>
+        <span>Standard Deviation (\\(s\\)): <strong style="color: var(--chart-ink);">10.0 (Constant Spread of Individuals)</strong></span>
+        <span>Standard Error (\\(SE\\)): <strong id="sdse-se" style="color: var(--chart-2);">2.00 (Narrow Uncertainty in Mean)</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="sdse-canvas" width="700" height="340"></canvas>
@@ -2044,7 +2046,7 @@ export class Interactive2D {
       const minX = -30, maxX = 30;
 
       // Draw Individual Distribution (SD = 10, Cyan, Wide)
-      ctx.strokeStyle = '#38bdf8';
+      ctx.strokeStyle = C.ink;
       ctx.lineWidth = 2.5;
       ctx.beginPath();
       for (let px = 0; px <= plotW; px += 2) {
@@ -2058,7 +2060,7 @@ export class Interactive2D {
       ctx.stroke();
 
       // Draw Mean Sampling Distribution (SE = s/sqrt(n), Green, Tall and Narrow)
-      ctx.strokeStyle = '#10b981';
+      ctx.strokeStyle = C.c2;
       ctx.lineWidth = 3;
       ctx.beginPath();
       for (let px = 0; px <= plotW; px += 2) {
@@ -2092,7 +2094,7 @@ export class Interactive2D {
       <div class="clt-readout">
         <span>Original Data: [12, 14, 15, 18, 45]</span>
         <span>Original Median: <strong>15.0</strong></span>
-        <span>Bootstrap 95% CI: <strong id="boot-ci" style="color: #10b981;">--</strong></span>
+        <span>Bootstrap 95% CI: <strong id="boot-ci" style="color: var(--chart-2);">--</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="boot-canvas" width="700" height="340"></canvas>
@@ -2117,7 +2119,7 @@ export class Interactive2D {
       ctx.clearRect(0, 0, w, H);
 
       if (resampledMedians.length === 0) {
-        ctx.fillStyle = '#64748b';
+        ctx.fillStyle = C.muted;
         ctx.font = '14px system-ui';
         ctx.textAlign = 'center';
         ctx.fillText('Click "Draw 1,000 Bootstrap Resamples" to begin!', w / 2, H / 2);
@@ -2145,9 +2147,9 @@ export class Interactive2D {
         const barH = (counts[k] / maxC) * (plotH - 20);
         const yPix = (H - padB) - barH;
 
-        ctx.fillStyle = (k >= low && k <= high) ? '#10b981' : '#ef4444';
+        ctx.fillStyle = (k >= low && k <= high) ? C.c2 : C.ink;
         ctx.fillRect(xPix, yPix, barW, barH);
-        ctx.fillStyle = '#94a3b8';
+        ctx.fillStyle = C.muted;
         ctx.font = '11px system-ui';
         ctx.textAlign = 'center';
         ctx.fillText(k, xPix + barW / 2, H - padB + 16);
@@ -2198,7 +2200,7 @@ export class Interactive2D {
 
     const vals = [32, 28, 22, 18];
     const labels = ['Category A', 'Category B', 'Category C', 'Category D'];
-    const colors = ['#38bdf8', '#10b981', '#f59e0b', '#ec4899'];
+    const colors = [C.ink, C.c2, C.c3, C.c2];
 
     const w = canvas.width, H = canvas.height;
     ctx.clearRect(0, 0, w, H);
@@ -2220,7 +2222,7 @@ export class Interactive2D {
       startAngle += slice;
     });
 
-    ctx.fillStyle = '#94a3b8';
+    ctx.fillStyle = C.muted;
     ctx.font = 'bold 13px system-ui';
     ctx.textAlign = 'center';
     ctx.fillText('Pie Chart (Angle Guessing)', pieCenter.x, H - 20);
@@ -2234,7 +2236,7 @@ export class Interactive2D {
       ctx.fillStyle = colors[idx];
       ctx.fillRect(barStartX, y, barW, 36);
 
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = C.ink;
       ctx.font = '12px system-ui';
       ctx.textAlign = 'left';
       ctx.fillText(`${labels[idx]}: ${v}%`, barStartX + 8, y + 22);
@@ -2292,7 +2294,7 @@ export class Interactive2D {
       const boxY = H / 2;
 
       // Axis
-      ctx.strokeStyle = '#334155';
+      ctx.strokeStyle = C.grid;
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(padL, boxY + 70);
@@ -2306,7 +2308,7 @@ export class Interactive2D {
       const maxValX = padL + ((45 - minX) / (maxX - minX)) * plotW;
 
       // Whiskers
-      ctx.strokeStyle = '#94a3b8';
+      ctx.strokeStyle = C.muted;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(minValX, boxY);
@@ -2320,14 +2322,14 @@ export class Interactive2D {
       ctx.strokeRect(maxValX, boxY - 15, 0.1, 30);
 
       // Box (Q1 to Q3)
-      ctx.fillStyle = 'rgba(56, 189, 248, 0.35)';
+      ctx.fillStyle = C.a(0.35);
       ctx.fillRect(q1X, boxY - 35, q3X - q1X, 70);
-      ctx.strokeStyle = '#38bdf8';
+      ctx.strokeStyle = C.ink;
       ctx.lineWidth = 2;
       ctx.strokeRect(q1X, boxY - 35, q3X - q1X, 70);
 
       // Median Line
-      ctx.strokeStyle = '#f59e0b';
+      ctx.strokeStyle = C.c3;
       ctx.lineWidth = 4;
       ctx.beginPath();
       ctx.moveTo(medX, boxY - 35);
@@ -2337,12 +2339,12 @@ export class Interactive2D {
       // Outlier dot
       if (hasOutlier) {
         const outX = padL + ((95 - minX) / (maxX - minX)) * plotW;
-        ctx.fillStyle = '#ef4444';
+        ctx.fillStyle = C.ink;
         ctx.beginPath();
         ctx.arc(outX, boxY, 7, 0, 2 * Math.PI);
         ctx.fill();
 
-        ctx.fillStyle = '#ef4444';
+        ctx.fillStyle = C.ink;
         ctx.font = '11px system-ui';
         ctx.textAlign = 'center';
         ctx.fillText('Outlier (95)', outX, boxY - 14);
@@ -2379,7 +2381,7 @@ export class Interactive2D {
     ctx.clearRect(0, 0, w, H);
 
     // Left: Skewed Raw
-    ctx.fillStyle = '#ef4444';
+    ctx.fillStyle = C.ink;
     ctx.font = 'bold 12px system-ui';
     ctx.textAlign = 'center';
     ctx.fillText('Raw Data (Heavy Skew)', 180, 40);
@@ -2388,19 +2390,19 @@ export class Interactive2D {
     rawVals.forEach((v, idx) => {
       const y = 70 + idx * 24;
       const barW = (v / 512) * 260;
-      ctx.fillStyle = '#ef4444';
+      ctx.fillStyle = C.ink;
       ctx.fillRect(50, y, barW, 16);
     });
 
     // Right: Log Transformed
-    ctx.fillStyle = '#10b981';
+    ctx.fillStyle = C.c2;
     ctx.fillText('Log2 Transformed (Evenly Spaced)', 500, 40);
 
     rawVals.forEach((v, idx) => {
       const y = 70 + idx * 24;
       const logV = Math.log2(v);
       const barW = (logV / 9) * 260;
-      ctx.fillStyle = '#10b981';
+      ctx.fillStyle = C.c2;
       ctx.fillRect(380, y, barW, 16);
     });
   }
@@ -2419,8 +2421,8 @@ export class Interactive2D {
       </div>
       <div class="clt-readout">
         <span>True Mean (\\(\\mu\\)): <strong>50.0</strong></span>
-        <span>Intervals Covering Truth: <strong id="ci-cover" style="color: #10b981;">--</strong></span>
-        <span>Intervals Missing: <strong id="ci-miss" style="color: #ef4444;">--</strong></span>
+        <span>Intervals Covering Truth: <strong id="ci-cover" style="color: var(--chart-2);">--</strong></span>
+        <span>Intervals Missing: <strong id="ci-miss" style="color: var(--chart-ink);">--</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="ci-canvas" width="700" height="340"></canvas>
@@ -2471,7 +2473,7 @@ export class Interactive2D {
 
       // True Mean Line
       const trueX = padL + ((trueMu - minX) / (maxX - minX)) * plotW;
-      ctx.strokeStyle = '#ffffff';
+      ctx.strokeStyle = C.ink;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(trueX, padT);
@@ -2484,7 +2486,7 @@ export class Interactive2D {
         const x1 = padL + ((it.low - minX) / (maxX - minX)) * plotW;
         const x2 = padL + ((it.high - minX) / (maxX - minX)) * plotW;
 
-        ctx.strokeStyle = it.covers ? '#10b981' : '#ef4444';
+        ctx.strokeStyle = it.covers ? C.c2 : C.ink;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(x1, y);
@@ -2515,8 +2517,8 @@ export class Interactive2D {
         </div>
       </div>
       <div class="clt-readout">
-        <span>Sum of Squared Residuals (\\(SSR\\)): <strong id="reg-ssr" style="color: #ef4444;">--</strong></span>
-        <span>\\(R^2 = 1 - \\frac{SSR}{SS_{\\text{tot}}}\\): <strong id="reg-r2" style="color: #10b981; font-size: 1.15rem;">--</strong></span>
+        <span>Sum of Squared Residuals (\\(SSR\\)): <strong id="reg-ssr" style="color: var(--chart-ink);">--</strong></span>
+        <span>\\(R^2 = 1 - \\frac{SSR}{SS_{\\text{tot}}}\\): <strong id="reg-r2" style="color: var(--chart-2); font-size: 1.15rem;">--</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="reg-canvas" width="700" height="340"></canvas>
@@ -2576,14 +2578,14 @@ export class Interactive2D {
         const pred = b0 + b1 * p.x;
         const predYPix = (H - padB) - ((pred - minY) / (maxY - minY)) * plotH;
 
-        ctx.strokeStyle = '#ef4444';
+        ctx.strokeStyle = C.ink;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(px, py);
         ctx.lineTo(px, predYPix);
         ctx.stroke();
 
-        ctx.fillStyle = '#38bdf8';
+        ctx.fillStyle = C.ink;
         ctx.beginPath();
         ctx.arc(px, py, 6, 0, 2 * Math.PI);
         ctx.fill();
@@ -2592,7 +2594,7 @@ export class Interactive2D {
       // Regression Line
       const y0 = b0 + b1 * minX;
       const y1 = b0 + b1 * maxX;
-      ctx.strokeStyle = '#f59e0b';
+      ctx.strokeStyle = C.c3;
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(padL, (H - padB) - ((y0 - minY) / (maxY - minY)) * plotH);
@@ -2636,9 +2638,9 @@ export class Interactive2D {
     ctx.clearRect(0, 0, w, H);
 
     const groups = [
-      { name: 'Control', vals: [10, 11, 12, 13, 14], mean: 12.0, color: '#38bdf8' },
-      { name: 'Drug A', vals: [16, 17, 18, 20, 21], mean: 18.5, color: '#10b981' },
-      { name: 'Drug B', vals: [23, 24, 26, 28, 29], mean: 26.0, color: '#f59e0b' }
+      { name: 'Control', vals: [10, 11, 12, 13, 14], mean: 12.0, color: C.ink },
+      { name: 'Drug A', vals: [16, 17, 18, 20, 21], mean: 18.5, color: C.c2 },
+      { name: 'Drug B', vals: [23, 24, 26, 28, 29], mean: 26.0, color: C.c3 }
     ];
 
     groups.forEach((g, idx) => {
@@ -2660,7 +2662,7 @@ export class Interactive2D {
       ctx.lineTo(centerX + 40, meanY);
       ctx.stroke();
 
-      ctx.fillStyle = '#94a3b8';
+      ctx.fillStyle = C.muted;
       ctx.font = 'bold 12px system-ui';
       ctx.textAlign = 'center';
       ctx.fillText(g.name, centerX, 320);
@@ -2685,8 +2687,8 @@ export class Interactive2D {
         </div>
       </div>
       <div class="clt-readout">
-        <span>Critical Cutoff Z: <strong id="alpha-z" style="color: #f59e0b;">±1.960</strong></span>
-        <span>Rejection Zone Area: <strong id="alpha-area" style="color: #ef4444;">5.0%</strong></span>
+        <span>Critical Cutoff Z: <strong id="alpha-z" style="color: var(--chart-3);">±1.960</strong></span>
+        <span>Rejection Zone Area: <strong id="alpha-area" style="color: var(--chart-ink);">5.0%</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="alph-canvas" width="700" height="340"></canvas>
@@ -2717,7 +2719,7 @@ export class Interactive2D {
       const minX = -4.0, maxX = 4.0;
 
       // Draw Normal Curve
-      ctx.strokeStyle = '#38bdf8';
+      ctx.strokeStyle = C.ink;
       ctx.lineWidth = 3;
       ctx.beginPath();
       for (let px = 0; px <= plotW; px += 2) {
@@ -2732,7 +2734,7 @@ export class Interactive2D {
       // Draw Rejection Cutoffs
       for (let side of [-1, 1]) {
         const cutX = padL + (((side * zCrit) - minX) / (maxX - minX)) * plotW;
-        ctx.strokeStyle = '#ef4444';
+        ctx.strokeStyle = C.ink;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(cutX, padT);
@@ -2763,8 +2765,8 @@ export class Interactive2D {
         </div>
       </div>
       <div class="clt-readout">
-        <span>Degrees of Freedom (\\(df\\)): <strong id="ttest-df" style="color: #38bdf8;">n - 1</strong></span>
-        <span>Core Formula: <strong id="ttest-formula" style="color: #10b981;">t = (x̄ - μ) / (s / √n)</strong></span>
+        <span>Degrees of Freedom (\\(df\\)): <strong id="ttest-df" style="color: var(--chart-ink);">n - 1</strong></span>
+        <span>Core Formula: <strong id="ttest-formula" style="color: var(--chart-2);">t = (x̄ - μ) / (s / √n)</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="ttest-canvas" width="700" height="340"></canvas>
@@ -2797,7 +2799,7 @@ export class Interactive2D {
       const w = canvas.width, H = canvas.height;
       ctx.clearRect(0, 0, w, H);
 
-      ctx.fillStyle = '#38bdf8';
+      ctx.fillStyle = C.ink;
       ctx.font = 'bold 16px system-ui';
       ctx.textAlign = 'center';
       ctx.fillText(`Student's t Distribution with Heavy Tails`, w / 2, 60);
@@ -2807,7 +2809,7 @@ export class Interactive2D {
       const plotW = w - padL - padR, plotH = H - padT - padB;
       const minX = -4, maxX = 4;
 
-      ctx.strokeStyle = '#f59e0b';
+      ctx.strokeStyle = C.c3;
       ctx.lineWidth = 3;
       ctx.beginPath();
       for (let px = 0; px <= plotW; px += 2) {
@@ -2841,8 +2843,8 @@ export class Interactive2D {
         </div>
       </div>
       <div class="clt-readout">
-        <span>Alpha Allocation: <strong id="tail-alloc" style="color: #38bdf8;">Split: 2.5% in each tail</strong></span>
-        <span>Critical Value: <strong id="tail-crit" style="color: #f59e0b;">Z = ±1.96</strong></span>
+        <span>Alpha Allocation: <strong id="tail-alloc" style="color: var(--chart-ink);">Split: 2.5% in each tail</strong></span>
+        <span>Critical Value: <strong id="tail-crit" style="color: var(--chart-3);">Z = ±1.96</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="tail-canvas" width="700" height="340"></canvas>
@@ -2877,7 +2879,7 @@ export class Interactive2D {
       const minX = -4.0, maxX = 4.0;
 
       // Draw Normal curve
-      ctx.strokeStyle = '#38bdf8';
+      ctx.strokeStyle = C.ink;
       ctx.lineWidth = 3;
       ctx.beginPath();
       for (let px = 0; px <= plotW; px += 2) {
@@ -2892,7 +2894,7 @@ export class Interactive2D {
       // Draw Critical lines
       const zCut = mode === 'two' ? 1.96 : 1.645;
       const rPix = padL + ((zCut - minX) / (maxX - minX)) * plotW;
-      ctx.strokeStyle = '#ef4444';
+      ctx.strokeStyle = C.ink;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(rPix, padT);
@@ -2942,7 +2944,7 @@ export class Interactive2D {
     const w = canvas.width, H = canvas.height;
     ctx.clearRect(0, 0, w, H);
 
-    ctx.fillStyle = '#38bdf8';
+    ctx.fillStyle = C.ink;
     ctx.font = 'bold 16px system-ui';
     ctx.textAlign = 'center';
     ctx.fillText('Quantile Normalization Rank-Matching Process', w / 2, 50);
@@ -2950,7 +2952,7 @@ export class Interactive2D {
     const sampleA = [5, 2, 3, 4];
     const sampleB = [4, 1, 4, 2];
 
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = C.ink;
     ctx.font = '13px monospace';
     ctx.fillText('Step 1: Original Arrays           Step 2: Sorted & Ranked        Step 3: Quantile Normalized', w / 2, 100);
     ctx.fillText('A: [5, 2, 3, 4]                   A: [2, 3, 4, 5]               A_norm: [4.5, 1.5, 3.0, 3.0]', w / 2, 140);
@@ -2974,7 +2976,7 @@ export class Interactive2D {
       <div class="clt-readout">
         <span>Observed Data: [1.2, 1.8, 2.4, 2.6]</span>
         <span>Sample Mean (True MLE): <strong>2.00</strong></span>
-        <span>Log-Likelihood \\(\\ln L(\\mu)\\): <strong id="mle-ll" style="color: #38bdf8;">--</strong></span>
+        <span>Log-Likelihood \\(\\ln L(\\mu)\\): <strong id="mle-ll" style="color: var(--chart-ink);">--</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="mle-canvas" width="700" height="340"></canvas>
@@ -3011,7 +3013,7 @@ export class Interactive2D {
       const minMu = -1.0, maxMu = 4.0;
 
       // Draw Log-Likelihood Curve
-      ctx.strokeStyle = '#38bdf8';
+      ctx.strokeStyle = C.ink;
       ctx.lineWidth = 3;
       ctx.beginPath();
       for (let px = 0; px <= plotW; px += 2) {
@@ -3028,14 +3030,14 @@ export class Interactive2D {
       const candXPix = padL + ((mu - minMu) / (maxMu - minMu)) * plotW;
       const candYPix = (H - padB) - ((logLik + 12) / 8.0) * (plotH - 20);
 
-      ctx.fillStyle = '#ef4444';
+      ctx.fillStyle = C.ink;
       ctx.beginPath();
       ctx.arc(candXPix, candYPix, 7, 0, 2 * Math.PI);
       ctx.fill();
 
       // Peak line at mu = 2.0
       const peakXPix = padL + ((2.0 - minMu) / (maxMu - minMu)) * plotW;
-      ctx.strokeStyle = '#10b981';
+      ctx.strokeStyle = C.c2;
       ctx.lineWidth = 2;
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
@@ -3043,7 +3045,7 @@ export class Interactive2D {
       ctx.lineTo(peakXPix, H - padB);
       ctx.stroke();
       ctx.setLineDash([]);
-      ctx.fillStyle = '#10b981';
+      ctx.fillStyle = C.c2;
       ctx.fillText('Peak MLE (μ = 2.0)', peakXPix, padT + 16);
     };
 
@@ -3073,9 +3075,9 @@ export class Interactive2D {
         </div>
       </div>
       <div class="clt-readout">
-        <span>Type I Error (\\(\\alpha\\)): <strong style="color: #ef4444;" id="pwr-alpha-read">5%</strong></span>
-        <span>Type II Error (\\(\\beta\\)): <strong style="color: #8b5cf6;" id="pwr-beta-read">--</strong></span>
-        <span>Statistical Power (\\(1 - \\beta\\)): <strong style="color: #10b981;" id="pwr-power-read">--</strong></span>
+        <span>Type I Error (\\(\\alpha\\)): <strong style="color: var(--chart-ink);" id="pwr-alpha-read">5%</strong></span>
+        <span>Type II Error (\\(\\beta\\)): <strong style="color: var(--chart-2);" id="pwr-beta-read">--</strong></span>
+        <span>Statistical Power (\\(1 - \\beta\\)): <strong style="color: var(--chart-2);" id="pwr-power-read">--</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="pwr-canvas" width="700" height="340"></canvas>
@@ -3138,7 +3140,7 @@ export class Interactive2D {
       const minX = -4.0, maxX = 8.0;
 
       // Draw Null Curve
-      ctx.strokeStyle = '#64748b';
+      ctx.strokeStyle = C.muted;
       ctx.lineWidth = 2;
       ctx.beginPath();
       for (let px = 0; px <= plotW; px += 2) {
@@ -3152,7 +3154,7 @@ export class Interactive2D {
       ctx.stroke();
 
       // Draw Alternative Curve
-      ctx.strokeStyle = '#38bdf8';
+      ctx.strokeStyle = C.ink;
       ctx.lineWidth = 3;
       ctx.beginPath();
       for (let px = 0; px <= plotW; px += 2) {
@@ -3167,7 +3169,7 @@ export class Interactive2D {
 
       // Critical line
       const critPix = padL + ((xCrit - minX) / (maxX - minX)) * plotW;
-      ctx.strokeStyle = '#ef4444';
+      ctx.strokeStyle = C.ink;
       ctx.lineWidth = 2;
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
@@ -3262,10 +3264,10 @@ export class Interactive2D {
       const pad = 50;
       const plotW = w - 2 * pad, plotH = H - 2 * pad;
 
-      ctx.strokeStyle = '#334155';
+      ctx.strokeStyle = C.grid;
       ctx.strokeRect(pad, pad, plotW, plotH);
 
-      ctx.strokeStyle = '#f59e0b';
+      ctx.strokeStyle = C.c3;
       ctx.lineWidth = 2;
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
@@ -3278,7 +3280,7 @@ export class Interactive2D {
       const minSample = Math.min(-3.2, data[0]);
       const maxSample = Math.max(3.2, data[data.length - 1]);
 
-      ctx.fillStyle = '#38bdf8';
+      ctx.fillStyle = C.ink;
       for (let i = 0; i < n; i++) {
         const p = (i + 0.5) / n;
         const qTheo = normInv(p);
@@ -3319,8 +3321,8 @@ export class Interactive2D {
         </div>
       </div>
       <div class="clt-readout">
-        <span>Current Metric: <strong id="pvl-metric-name" style="color: #38bdf8;">Probability (Area)</strong></span>
-        <span>Value: <strong id="pvl-metric-val" style="color: #f59e0b;">0.3413</strong></span>
+        <span>Current Metric: <strong id="pvl-metric-name" style="color: var(--chart-ink);">Probability (Area)</strong></span>
+        <span>Value: <strong id="pvl-metric-val" style="color: var(--chart-3);">0.3413</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="pvl-canvas" width="700" height="340"></canvas>
@@ -3356,7 +3358,7 @@ export class Interactive2D {
         sliderLabel.innerHTML = `Right Boundary (b): <span class="highlight-val">${val.toFixed(1)}</span>`;
         metricName.textContent = 'Probability P(0 <= X <= b) (Area under curve)';
 
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.35)';
+        ctx.fillStyle = C.a(0.35);
         ctx.beginPath();
         const startXPix = padL + ((0 - minX) / (maxX - minX)) * plotW;
         ctx.moveTo(startXPix, H - padB);
@@ -3374,7 +3376,7 @@ export class Interactive2D {
         ctx.closePath();
         ctx.fill();
 
-        ctx.strokeStyle = '#38bdf8';
+        ctx.strokeStyle = C.ink;
         ctx.lineWidth = 3;
         ctx.beginPath();
         for (let px = 0; px <= plotW; px += 2) {
@@ -3399,7 +3401,7 @@ export class Interactive2D {
 
         const candMu = val;
 
-        ctx.strokeStyle = '#f59e0b';
+        ctx.strokeStyle = C.c3;
         ctx.lineWidth = 3;
         ctx.beginPath();
         for (let px = 0; px <= plotW; px += 2) {
@@ -3415,14 +3417,14 @@ export class Interactive2D {
         const curHeight = Math.exp(-0.5 * (xObs - candMu) ** 2) / Math.sqrt(2 * Math.PI);
         const obsYPix = (H - padB) - curHeight * (plotH - 20) * 2.2;
 
-        ctx.strokeStyle = '#ef4444';
+        ctx.strokeStyle = C.ink;
         ctx.lineWidth = 4;
         ctx.beginPath();
         ctx.moveTo(obsXPix, H - padB);
         ctx.lineTo(obsXPix, obsYPix);
         ctx.stroke();
 
-        ctx.fillStyle = '#ef4444';
+        ctx.fillStyle = C.ink;
         ctx.beginPath();
         ctx.arc(obsXPix, obsYPix, 6, 0, 2 * Math.PI);
         ctx.fill();
@@ -3458,7 +3460,7 @@ export class Interactive2D {
         </div>
       </div>
       <div class="clt-readout">
-        <span>Probability of Disease given Positive Test \\(P(D \\mid +)\\): <strong id="bayes-posterior" style="color: #ef4444; font-size: 1.2rem;">--</strong></span>
+        <span>Probability of Disease given Positive Test \\(P(D \\mid +)\\): <strong id="bayes-posterior" style="color: var(--chart-ink); font-size: 1.2rem;">--</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="bayes-canvas" width="700" height="340"></canvas>
@@ -3505,10 +3507,10 @@ export class Interactive2D {
       const w = canvas.width, H = canvas.height;
       ctx.clearRect(0, 0, w, H);
 
-      ctx.strokeStyle = '#475569';
+      ctx.strokeStyle = C.grid;
       ctx.lineWidth = 2;
 
-      ctx.fillStyle = '#94a3b8';
+      ctx.fillStyle = C.muted;
       ctx.font = '12px system-ui';
       ctx.textAlign = 'center';
       ctx.fillText(`Population: 100,000`, 100, H / 2);
@@ -3520,10 +3522,10 @@ export class Interactive2D {
       ctx.lineTo(260, (3 * H) / 4);
       ctx.stroke();
 
-      ctx.fillStyle = '#ef4444';
+      ctx.fillStyle = C.ink;
       ctx.fillText(`Sick: ${sick.toFixed(0)} (${(prev * 100).toFixed(1)}%)`, 280, H / 4);
 
-      ctx.fillStyle = '#10b981';
+      ctx.fillStyle = C.c2;
       ctx.fillText(`Healthy: ${healthy.toFixed(0)} (${((1 - prev) * 100).toFixed(1)}%)`, 280, (3 * H) / 4);
 
       ctx.beginPath();
@@ -3538,14 +3540,14 @@ export class Interactive2D {
       ctx.lineTo(440, (7 * H) / 8);
       ctx.stroke();
 
-      ctx.fillStyle = '#38bdf8';
+      ctx.fillStyle = C.ink;
       ctx.fillText(`True Positives (+): ${truePos.toFixed(0)}`, 540, H / 8);
-      ctx.fillStyle = '#64748b';
+      ctx.fillStyle = C.muted;
       ctx.fillText(`False Negatives (-): ${falseNeg.toFixed(0)}`, 540, (3 * H) / 8);
 
-      ctx.fillStyle = '#ef4444';
+      ctx.fillStyle = C.ink;
       ctx.fillText(`False Positives (+): ${falsePos.toFixed(0)}`, 540, (5 * H) / 8);
-      ctx.fillStyle = '#64748b';
+      ctx.fillStyle = C.muted;
       ctx.fillText(`True Negatives (-): ${trueNeg.toFixed(0)}`, 540, (7 * H) / 8);
     };
 
@@ -3570,8 +3572,8 @@ export class Interactive2D {
       </div>
       <div class="clt-readout">
         <span>Probability: <strong id="read-p">0.80</strong></span>
-        <span>Odds \\(\\frac{p}{1-p}\\): <strong id="read-odds" style="color: #38bdf8;">4.00</strong></span>
-        <span>Log-Odds (Logit): <strong id="read-logit" style="color: #f59e0b;">+1.386</strong></span>
+        <span>Odds \\(\\frac{p}{1-p}\\): <strong id="read-odds" style="color: var(--chart-ink);">4.00</strong></span>
+        <span>Log-Odds (Logit): <strong id="read-logit" style="color: var(--chart-3);">+1.386</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="odds-canvas" width="700" height="340"></canvas>
@@ -3607,7 +3609,7 @@ export class Interactive2D {
       const padL = 60, padR = 40, padT = 30, padB = 40;
       const plotW = w - padL - padR, plotH = H - padT - padB;
 
-      ctx.strokeStyle = '#334155';
+      ctx.strokeStyle = C.grid;
       ctx.beginPath();
       ctx.moveTo(padL, padT);
       ctx.lineTo(padL, H - padB);
@@ -3615,13 +3617,13 @@ export class Interactive2D {
       ctx.stroke();
 
       const zeroY = padT + plotH / 2;
-      ctx.strokeStyle = '#1e293b';
+      ctx.strokeStyle = C.grid;
       ctx.beginPath();
       ctx.moveTo(padL, zeroY);
       ctx.lineTo(w - padR, zeroY);
       ctx.stroke();
 
-      ctx.strokeStyle = '#38bdf8';
+      ctx.strokeStyle = C.ink;
       ctx.lineWidth = 3;
       ctx.beginPath();
       for (let px = 0; px <= plotW; px += 2) {
@@ -3636,7 +3638,7 @@ export class Interactive2D {
       const ptX = padL + ((p - 0.02) / 0.96) * plotW;
       const ptY = zeroY - (logit / 4.0) * (plotH / 2 - 10);
 
-      ctx.fillStyle = '#f59e0b';
+      ctx.fillStyle = C.c3;
       ctx.beginPath();
       ctx.arc(ptX, ptY, 7, 0, 2 * Math.PI);
       ctx.fill();
@@ -3689,7 +3691,7 @@ export class Interactive2D {
       const padL = 40, padR = 40, padT = 30, padB = 40;
       const plotW = w - padL - padR, plotH = H - padT - padB;
 
-      ctx.fillStyle = '#38bdf8';
+      ctx.fillStyle = C.ink;
       pts.forEach(pt => {
         const px = padL + (pt.x / 10) * plotW;
         const py = (H - padB) - ((pt.y + 6) / 12) * plotH;
@@ -3698,7 +3700,7 @@ export class Interactive2D {
         ctx.fill();
       });
 
-      ctx.strokeStyle = '#f59e0b';
+      ctx.strokeStyle = C.c3;
       ctx.lineWidth = 3;
       ctx.beginPath();
 
@@ -3748,8 +3750,8 @@ export class Interactive2D {
       </div>
       <div class="clt-readout">
         <span>True Population Variance (\\(\\sigma^2\\)): <strong>16.00</strong></span>
-        <span>Average Dividing by N: <strong id="bessel-n-avg" style="color: #ef4444;">--</strong></span>
-        <span>Average Dividing by N-1: <strong id="bessel-n1-avg" style="color: #10b981;">--</strong></span>
+        <span>Average Dividing by N: <strong id="bessel-n-avg" style="color: var(--chart-ink);">--</strong></span>
+        <span>Average Dividing by N-1: <strong id="bessel-n1-avg" style="color: var(--chart-2);">--</strong></span>
       </div>
       <div class="canvas-wrapper">
         <canvas id="bessel-canvas" width="700" height="340"></canvas>
@@ -3801,7 +3803,7 @@ export class Interactive2D {
 
       const total = historyN.length;
       if (total === 0) {
-        ctx.fillStyle = '#64748b';
+        ctx.fillStyle = C.muted;
         ctx.font = '14px system-ui';
         ctx.textAlign = 'center';
         ctx.fillText('Click "Draw 5,000 Samples" to simulate Bessel\'s Correction!', w / 2, H / 2);
@@ -3821,7 +3823,7 @@ export class Interactive2D {
       const maxVal = 32.0;
       const truthX = padL + (trueSigma2 / maxVal) * plotW;
 
-      ctx.strokeStyle = '#f59e0b';
+      ctx.strokeStyle = C.c3;
       ctx.lineWidth = 3;
       ctx.setLineDash([6, 4]);
       ctx.beginPath();
@@ -3830,13 +3832,13 @@ export class Interactive2D {
       ctx.stroke();
       ctx.setLineDash([]);
 
-      ctx.fillStyle = '#f59e0b';
+      ctx.fillStyle = C.c3;
       ctx.font = 'bold 12px system-ui';
       ctx.textAlign = 'center';
       ctx.fillText(`True \\sigma^2 = 16.0`, truthX, padT - 10);
 
       const nX = padL + (avgN / maxVal) * plotW;
-      ctx.strokeStyle = '#ef4444';
+      ctx.strokeStyle = C.ink;
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(nX, padT + 20);
@@ -3844,7 +3846,7 @@ export class Interactive2D {
       ctx.stroke();
 
       const n1X = padL + (avgN1 / maxVal) * plotW;
-      ctx.strokeStyle = '#10b981';
+      ctx.strokeStyle = C.c2;
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(n1X, padT + 20);

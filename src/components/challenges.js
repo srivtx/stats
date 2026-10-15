@@ -1,4 +1,5 @@
 // src/components/challenges.js
+import { C } from './palette.js';
 /**
  * Interactive Statistical Challenges Laboratory
  * Gamified first-principles challenges:
@@ -43,9 +44,9 @@ export class ChallengesLab {
         text: '#09090b',
         muted: '#71717a',
         accent: '#09090b',
-        success: '#059669',
-        warn: '#d97706',
-        error: '#dc2626'
+        success: '#0a0a0a',
+        warn: '#6b6b6b',
+        error: '#0a0a0a'
       };
     } else if (theme === 'bw-contrast') {
       return {
@@ -65,9 +66,9 @@ export class ChallengesLab {
       text: '#ffffff',
       muted: '#71717a',
       accent: '#ffffff',
-      success: '#10b981',
-      warn: '#f59e0b',
-      error: '#ef4444'
+      success: '#fafafa',
+      warn: '#a3a3a3',
+      error: '#fafafa'
     };
   }
 
@@ -626,7 +627,7 @@ export class ChallengesLab {
       ctx.stroke();
 
       // Fill rejection tails
-      ctx.fillStyle = 'rgba(239, 68, 68, 0.25)';
+      ctx.fillStyle = C.a(0.22);
       ctx.beginPath();
       ctx.moveTo(mapX(t), mapY(0));
       for (let x = t; x <= 4; x += 0.05) {

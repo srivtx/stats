@@ -10,6 +10,7 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { C } from '../palette.js';
 
 export class ThreeStudio {
   constructor(containerElement) {
@@ -231,10 +232,10 @@ export class ThreeStudio {
     const pos = geom.attributes.position;
     const colors = new Float32Array(pos.count * 3);
 
-    const colorCold = new THREE.Color(0x1e3a8a); // deep blue
-    const colorMid = new THREE.Color(0x06b6d4);  // cyan
-    const colorHot = new THREE.Color(0xf59e0b);  // gold
-    const colorPeak = new THREE.Color(0xef4444); // crimson
+    const colorCold = new THREE.Color(C.grid);
+    const colorMid = new THREE.Color(C.muted);
+    const colorHot = new THREE.Color(C.c2);
+    const colorPeak = new THREE.Color(C.ink);
 
     // Determinant & normalization factor for bivariate normal
     const oneMinusRho2 = Math.max(0.01, 1 - rho * rho);
@@ -284,7 +285,7 @@ export class ThreeStudio {
 
     // Wireframe overlay
     const wireMat = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
+      color: C.ink,
       wireframe: true,
       transparent: true,
       opacity: 0.08
@@ -297,7 +298,7 @@ export class ThreeStudio {
     if (slicePos !== null && slicePos !== undefined) {
       const sliceGeom = new THREE.PlaneGeometry(size, 7);
       const sliceMat = new THREE.MeshBasicMaterial({
-        color: 0xec4899,
+        color: C.ink,
         side: THREE.DoubleSide,
         transparent: true,
         opacity: 0.35
@@ -320,7 +321,7 @@ export class ThreeStudio {
         curvePoints.push(new THREE.Vector3(slicePos, y + 0.08, z));
       }
       const curveGeom = new THREE.BufferGeometry().setFromPoints(curvePoints);
-      const curveMat = new THREE.LineBasicMaterial({ color: 0xf43f5e, linewidth: 4 });
+      const curveMat = new THREE.LineBasicMaterial({ color: C.ink, linewidth: 4 });
       const curveLine = new THREE.Line(curveGeom, curveMat);
       this.scene.add(curveLine);
       this.activeObjects.push(curveLine);
@@ -357,7 +358,7 @@ export class ThreeStudio {
         pos.setY(i, y);
 
         const t = Math.min(1.0, y / 8.0);
-        const c = new THREE.Color().lerpColors(new THREE.Color(0x10b981), new THREE.Color(0xef4444), t);
+        const c = new THREE.Color().lerpColors(new THREE.Color(C.c2), new THREE.Color(C.ink), t);
         colors[i * 3] = c.r;
         colors[i * 3 + 1] = c.g;
         colors[i * 3 + 2] = c.b;
@@ -372,7 +373,7 @@ export class ThreeStudio {
 
       // Current candidate parameter ball
       const ballGeom = new THREE.SphereGeometry(0.35, 16, 16);
-      const ballMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x38bdf8 });
+      const ballMat = new THREE.MeshStandardMaterial({ color: C.ink, emissive: C.ink });
       const ball = new THREE.Mesh(ballGeom, ballMat);
       const curLoss = 1.5 * (beta1 - trueB1) ** 2 + 1.2 * (beta2 - trueB2) ** 2;
       ball.position.set(beta1 * 2, Math.min(10, curLoss * 0.8) + 0.35, beta2 * 2);
@@ -380,7 +381,7 @@ export class ThreeStudio {
       this.activeObjects.push(ball);
 
       // Wireframe overlay on bowl
-      const wireMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.1 });
+      const wireMat = new THREE.MeshBasicMaterial({ color: C.ink, wireframe: true, transparent: true, opacity: 0.1 });
       const wireMesh = new THREE.Mesh(bowlGeom, wireMat);
       this.scene.add(wireMesh);
       this.activeObjects.push(wireMesh);
@@ -408,8 +409,8 @@ export class ThreeStudio {
     const sphereGeom = new THREE.SphereGeometry(0.25, 16, 16);
     dataPoints.forEach(pt => {
       const sphereMat = new THREE.MeshStandardMaterial({
-        color: 0x38bdf8,
-        emissive: 0x0284c7,
+        color: C.ink,
+        emissive: C.c2,
         roughness: 0.2
       });
       const sphere = new THREE.Mesh(sphereGeom, sphereMat);
@@ -426,7 +427,7 @@ export class ThreeStudio {
         ]);
         const resDist = Math.abs(pt.y - yPred);
         const lineMat = new THREE.LineBasicMaterial({
-          color: resDist > 1.2 ? 0xef4444 : 0x10b981,
+          color: resDist > 1.2 ? C.ink : C.c2,
           linewidth: 2
         });
         const line = new THREE.Line(lineGeom, lineMat);
@@ -450,7 +451,7 @@ export class ThreeStudio {
     planeGeom.computeVertexNormals();
 
     const planeMat = new THREE.MeshStandardMaterial({
-      color: 0xf59e0b,
+      color: C.c3,
       transparent: true,
       opacity: 0.65,
       side: THREE.DoubleSide,
@@ -461,7 +462,7 @@ export class ThreeStudio {
     this.activeObjects.push(planeMesh);
 
     // Plane border wireframe
-    const wireMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
+    const wireMat = new THREE.MeshBasicMaterial({ color: C.ink, wireframe: true });
     const wireMesh = new THREE.Mesh(planeGeom, wireMat);
     this.scene.add(wireMesh);
     this.activeObjects.push(wireMesh);
@@ -504,7 +505,7 @@ export class ThreeStudio {
       pos.setY(i, y);
 
       const t = Math.min(1.0, y / 7.0);
-      const c = new THREE.Color().lerpColors(new THREE.Color(0x312e81), new THREE.Color(0xf59e0b), t);
+      const c = new THREE.Color().lerpColors(new THREE.Color(C.grid), new THREE.Color(C.c3), t);
       colors[i * 3] = c.r;
       colors[i * 3 + 1] = c.g;
       colors[i * 3 + 2] = c.b;
@@ -520,7 +521,7 @@ export class ThreeStudio {
 
     // Current candidate parameter pin / marker
     const pinGeom = new THREE.CylinderGeometry(0.08, 0.08, 3, 16);
-    const pinMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xb91c1c });
+    const pinMat = new THREE.MeshStandardMaterial({ color: C.ink, emissive: C.c3 });
     const pin = new THREE.Mesh(pinGeom, pinMat);
 
     const candX = (candidateMu / 3) * (size / 2);
@@ -537,7 +538,7 @@ export class ThreeStudio {
     this.activeObjects.push(pin);
 
     // Flag peak sphere
-    const peakSphere = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    const peakSphere = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), new THREE.MeshBasicMaterial({ color: C.ink }));
     peakSphere.position.set(candX, candY + 3.0, candZ);
     this.scene.add(peakSphere);
     this.activeObjects.push(peakSphere);
@@ -579,7 +580,7 @@ export class ThreeStudio {
 
     geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     const ptMat = new THREE.PointsMaterial({
-      color: 0x38bdf8,
+      color: C.ink,
       size: 0.28,
       transparent: true,
       opacity: 0.85
@@ -592,7 +593,7 @@ export class ThreeStudio {
     const ellGeom = new THREE.SphereGeometry(3.5, 24, 24);
     ellGeom.scale(1.0 + Math.abs(rhoXY), 1.0, 1.0 + Math.abs(rhoXZ));
     const ellMat = new THREE.MeshBasicMaterial({
-      color: 0xf59e0b,
+      color: C.c3,
       wireframe: true,
       transparent: true,
       opacity: 0.25
