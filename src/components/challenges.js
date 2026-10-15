@@ -96,6 +96,14 @@ export class ChallengesLab {
         this.renderStage();
       });
     });
+
+    const doneTotal = CATALOG.filter(c => this.isDone(c)).length;
+    const countEl = this.container.querySelector('#hub-progress-count');
+    const fillEl = this.container.querySelector('#hub-progress-fill');
+    const trackEl = this.container.querySelector('.hub-progress-track');
+    if (countEl) countEl.textContent = doneTotal;
+    if (fillEl) fillEl.style.width = `${(doneTotal / CATALOG.length) * 100}%`;
+    if (trackEl) trackEl.setAttribute('aria-valuenow', String(doneTotal));
     this.refreshIcons();
   }
 
@@ -158,6 +166,13 @@ export class ChallengesLab {
             <button class="btn btn-ghost btn-sm btn-view-cert" id="btn-view-certificate" style="margin-top: 6px;">
               <i data-lucide="award"></i> View Certificate
             </button>
+          </div>
+        </div>
+
+        <div class="hub-progress">
+          <div class="hub-progress-text"><span id="hub-progress-count">0</span> of ${CATALOG.length} challenges complete</div>
+          <div class="hub-progress-track" role="progressbar" aria-label="Challenges completed" aria-valuemin="0" aria-valuemax="${CATALOG.length}" aria-valuenow="0">
+            <div class="hub-progress-fill" id="hub-progress-fill"></div>
           </div>
         </div>
 
@@ -264,7 +279,32 @@ export class ChallengesLab {
         break;
     }
 
+    const entry = CATALOG.find(c => c.key === this.currentChallenge);
+    const mod = entry && modulesData.find(m => m.id === entry.moduleId);
+    const card = stage.querySelector('.ch-card');
+    if (card && mod) {
+      card.insertAdjacentHTML('afterbegin', `<div class="ch-module-tag">Module ${mod.number} · ${mod.title}</div>`);
+    }
+
     this.refreshIcons();
+  }
+
+  drawLockedPlaceholder(canvas, text) {
+    const ctx = canvas.getContext('2d');
+    const colors = this.getThemeColors();
+    const { width: W, height: H } = canvas;
+    ctx.clearRect(0, 0, W, H);
+    ctx.save();
+    ctx.setLineDash([8, 6]);
+    ctx.strokeStyle = colors.grid;
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(14, 14, W - 28, H - 28);
+    ctx.restore();
+    ctx.fillStyle = colors.muted;
+    ctx.font = '14px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(text, W / 2, H / 2);
+    ctx.textAlign = 'start';
   }
 
   // ============================================================
@@ -1631,12 +1671,7 @@ export class ChallengesLab {
     const padL = 50, padR = 20, padT = 40, padB = 40;
     let answered = false;
 
-    const drawPlaceholder = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = colors.muted;
-      ctx.font = '14px Inter, sans-serif';
-      ctx.fillText('Make your prediction to unlock the simulation.', padL, canvas.height / 2);
-    };
+    const drawPlaceholder = () => this.drawLockedPlaceholder(canvas, 'Make your prediction to unlock the simulation.');
 
     const draw = () => {
       const n = parseInt(slider.value);
@@ -2030,12 +2065,7 @@ export class ChallengesLab {
     const banner = stage.querySelector('#bayes-banner');
     const colors = this.getThemeColors();
 
-    const drawPlaceholder = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = colors.muted;
-      ctx.font = '14px Inter, sans-serif';
-      ctx.fillText(`Imagine ${N.toLocaleString()} people. Make your prediction to reveal them.`, 20, canvas.height / 2);
-    };
+    const drawPlaceholder = () => this.drawLockedPlaceholder(canvas, `Imagine ${N.toLocaleString()} people. Make your prediction to reveal them.`);
 
     const drawGrid = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -2157,10 +2187,7 @@ export class ChallengesLab {
     const h = canvas.height - padT - padB;
     const maxP = Math.max(...pmfs);
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = colors.muted;
-    ctx.font = '14px Inter, sans-serif';
-    ctx.fillText('Make your estimate to reveal the distribution.', padL, canvas.height / 2);
+    this.drawLockedPlaceholder(canvas, 'Make your estimate to reveal the distribution.');
 
     slider.addEventListener('input', () => {
       lbl.textContent = `${slider.value}%`;
@@ -2622,9 +2649,7 @@ export class ChallengesLab {
     const w = canvas.width - padL - padR;
     const h = canvas.height - padT - padB;
 
-    ctx.fillStyle = colors.muted;
-    ctx.font = '14px Inter, sans-serif';
-    ctx.fillText('Lock in your λ to reveal the log-likelihood curve.', padL, canvas.height / 2);
+    this.drawLockedPlaceholder(canvas, 'Lock in your λ to reveal the log-likelihood curve.');
 
     slider.addEventListener('input', () => {
       const lam = parseFloat(slider.value);

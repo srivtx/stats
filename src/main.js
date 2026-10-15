@@ -142,7 +142,11 @@ class StatQuestApp {
         <aside class="sidebar" id="sidebar" aria-label="Course navigation">
           <div class="sidebar-header">
             <div class="brand-title">
-              <div class="brand-icon" aria-hidden="true">SQ</div>
+              <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+                <rect width="40" height="40" rx="9"/>
+                <path class="brand-tail" d="M27 19.5 C29 24.75 31 30 34 30 L27 30 Z"/>
+                <path class="brand-bell" d="M6 30 C12 30 14 9 20 9 C26 9 28 30 34 30"/>
+              </svg>
               <div>
                 <div class="brand-name">StatQuest</div>
                 <div class="brand-sub">Statistics Fundamentals</div>

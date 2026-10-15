@@ -28,7 +28,7 @@
   --chart-3: #7a7a7a;
   --chart-grid: #2a2a2a;
   --chart-muted: #7a7a7a;
-  --chart-bg: #000000;
+  --chart-bg: #151515;
 
   --bam-bg: #151515;
   --bam-border: #333333;
@@ -233,19 +233,26 @@ a {
   letter-spacing: 0.02em;
 }
 
-.brand-icon {
+.brand-mark {
   width: 34px;
   height: 34px;
-  background-color: var(--accent-primary);
-  color: var(--accent-contrast);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 0.8rem;
-  letter-spacing: -0.04em;
   flex-shrink: 0;
+}
+
+.brand-mark rect {
+  fill: var(--accent-primary);
+}
+
+.brand-mark .brand-tail {
+  fill: var(--accent-contrast);
+  opacity: 0.4;
+}
+
+.brand-mark .brand-bell {
+  fill: none;
+  stroke: var(--accent-contrast);
+  stroke-width: 2.4;
+  stroke-linecap: round;
 }
 
 .curriculum-progress-wrap {
@@ -559,9 +566,11 @@ a {
   font-size: 1.05rem;
   font-weight: 650;
   letter-spacing: -0.01em;
-  white-space: nowrap;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .header-right {
@@ -1916,6 +1925,55 @@ input[type="checkbox"] {
   border-radius: 4px;
   color: var(--text-secondary);
   white-space: nowrap;
+}
+
+.ch-module-tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.hub-progress {
+  margin: 0 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hub-progress-text {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.hub-progress-text span {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.hub-progress-track {
+  height: 6px;
+  border-radius: 999px;
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.hub-progress-fill {
+  height: 100%;
+  width: 0;
+  background-color: var(--text-primary);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hub-progress-fill { transition: none; }
 }
 
 .ch-body-grid {
