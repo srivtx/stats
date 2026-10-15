@@ -18,6 +18,7 @@ import { renderVideoPlayer } from './components/videoPlayer.js';
 import { renderQuiz } from './components/quizEngine.js';
 import { renderCheatSheet } from './components/cheatsheet.js';
 import { renderPyodideLab } from './components/pyodideRunner.js';
+import { highlightCode } from './components/codeHighlight.js';
 import { ChallengesLab } from './components/challenges.js';
 import { watchInlineMath } from './components/mathify.js';
 
@@ -905,7 +906,7 @@ class StatQuestApp {
               <i data-lucide="copy" aria-hidden="true"></i> Copy R script
             </button>
           </div>
-          <pre class="code-block" tabindex="0" aria-label="R code"><code>${escapeHtml(video.rCode)}</code></pre>
+          <pre class="code-block" tabindex="0" aria-label="R code"><code>${highlightCode(video.rCode, 'r')}</code></pre>
         `;
         mount.appendChild(rBox);
 

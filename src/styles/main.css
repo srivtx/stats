@@ -1593,7 +1593,7 @@ input[type="checkbox"] {
   background-color: var(--bg-surface);
   color: var(--text-muted);
   font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   text-align: right;
   user-select: none;
   line-height: 1.5;
@@ -1601,10 +1601,36 @@ input[type="checkbox"] {
   border-right: 1px solid var(--border-color);
 }
 
+.pyodide-code-stack {
+  position: relative;
+  flex: 1;
+  display: flex;
+  min-width: 0;
+}
+
+.code-hl {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 12px 14px;
+  overflow: hidden;
+  pointer-events: none;
+  white-space: pre;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+}
+
 .pyodide-code-area {
+  position: relative;
+  z-index: 1;
   flex: 1;
   background-color: transparent;
-  color: var(--text-primary);
+  color: transparent;
+  caret-color: var(--text-primary);
   font-family: var(--font-mono);
   font-size: 0.82rem;
   line-height: 1.5;
@@ -1613,7 +1639,37 @@ input[type="checkbox"] {
   outline: none;
   resize: none;
   white-space: pre;
-  overflow-x: auto;
+  overflow: auto;
+}
+
+.pyodide-code-area::selection {
+  background: rgba(128, 128, 128, 0.35);
+  color: transparent;
+}
+
+.hl-kw {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.hl-str {
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+.hl-com {
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+.hl-num {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.hl-fn {
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .pyodide-terminal-container {
@@ -2837,10 +2893,11 @@ input[type="checkbox"] {
   .editor-gutter {
     width: 34px;
     padding: 10px 5px;
-    font-size: 0.72rem;
+    font-size: 0.76rem;
   }
 
-  .pyodide-code-area {
+  .pyodide-code-area,
+  .code-hl {
     padding: 10px 12px;
     font-size: 0.76rem;
     overflow-wrap: normal;

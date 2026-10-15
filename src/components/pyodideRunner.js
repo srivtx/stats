@@ -1,3 +1,4 @@
+import { highlightCode } from './codeHighlight.js';
 // src/components/pyodideRunner.js
 /**
  * Pyodide In-Browser Python Execution Engine & Interactive Statistical Sandbox
@@ -438,6 +439,16 @@ class PyodideManager {
           return;
         }
 
+        // histogram assignment: counts, edges = np.histogram(data, bins=[...])
+        const histMatch = trimmed.match(/^([a-zA-Z0-9_]+)\s*,\s*([a-zA-Z0-9_]+)\s*=\s*np\.histogram\(\s*([a-zA-Z0-9_]+)\s*,\s*bins\s*=\s*\[([0-9.,\s-]+)\]\s*\)/);
+        if (histMatch) {
+          const bins = histMatch[4].split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+          const [counts, edges] = env.np.histogram(env[histMatch[3]] || [], bins);
+          env[histMatch[1]] = counts;
+          env[histMatch[2]] = edges;
+          return;
+        }
+
         // append assignment: corrupted = np.append(clean, [5000])
         const appMatch = trimmed.match(/^([a-zA-Z0-9_]+)\s*=\s*np\.append\(([a-zA-Z0-9_]+),\s*\[([0-9.,\s-]+)\]\)/);
         if (appMatch) {
@@ -544,7 +555,8 @@ class PyodideManager {
                   return tr.slice(1, -1);
                 }
                 const v = evaluateExpression(tr, env);
-                return v !== undefined ? (typeof v === 'object' ? JSON.stringify(v) : String(v)) : tr;
+                if (Array.isArray(v)) return `[${v.map(x => String(x)).join(', ')}]`;
+                return v !== undefined ? String(v) : tr;
               });
               stdout.push(evals.join(' '));
             }
@@ -749,7 +761,10 @@ export function renderPyodideLab(container, video) {
       <!-- Code Editor Window -->
       <div class="pyodide-editor-container">
         <div class="editor-gutter" id="editor-gutter"></div>
-        <textarea class="pyodide-code-area" id="pyodide-code-input" spellcheck="false" autocomplete="off">${video.pythonCode}</textarea>
+        <div class="pyodide-code-stack">
+          <pre class="code-hl" id="code-hl" aria-hidden="true"><code>${highlightCode(video.pythonCode, 'python')}</code></pre>
+          <textarea class="pyodide-code-area" id="pyodide-code-input" spellcheck="false" autocomplete="off" aria-label="Python code editor">${video.pythonCode}</textarea>
+        </div>
       </div>
 
       <!-- Live Terminal Output Screen -->
@@ -790,13 +805,19 @@ export function renderPyodideLab(container, video) {
   const engineBtns = container.querySelectorAll('.btn-runtime-choice');
 
   // Gutter line numbering
+  const codeHl = container.querySelector('#code-hl');
   const updateGutter = () => {
     const lines = codeInput.value.split('\n').length;
     gutter.innerHTML = Array.from({ length: lines }, (_, i) => `<div>${i + 1}</div>`).join('');
+    codeHl.innerHTML = `<code>${highlightCode(codeInput.value, 'python')}</code>`;
+    codeHl.scrollTop = codeInput.scrollTop;
+    codeHl.scrollLeft = codeInput.scrollLeft;
   };
   codeInput.addEventListener('input', updateGutter);
   codeInput.addEventListener('scroll', () => {
     gutter.scrollTop = codeInput.scrollTop;
+    codeHl.scrollTop = codeInput.scrollTop;
+    codeHl.scrollLeft = codeInput.scrollLeft;
   });
   updateGutter();
 
