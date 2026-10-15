@@ -243,11 +243,6 @@ a {
   fill: var(--accent-primary);
 }
 
-.brand-mark .brand-tail {
-  fill: var(--accent-contrast);
-  opacity: 0.4;
-}
-
 .brand-mark .brand-bell {
   fill: none;
   stroke: var(--accent-contrast);
