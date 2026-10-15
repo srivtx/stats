@@ -1751,10 +1751,9 @@ input[type="checkbox"] {
 
 .module-chip-bar {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  overflow-x: auto;
-  margin-bottom: 12px;
-  padding-bottom: 4px;
+  margin-bottom: 14px;
 }
 
 .module-chip {
@@ -1769,7 +1768,9 @@ input[type="checkbox"] {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  white-space: nowrap;
+  max-width: 100%;
+  line-height: 1.3;
+  text-align: left;
   transition: all 0.15s ease;
 }
 
@@ -1782,6 +1783,17 @@ input[type="checkbox"] {
   background-color: var(--text-primary);
   color: var(--bg-main);
   border-color: var(--text-primary);
+}
+
+.module-chip:focus-visible,
+.ch-nav-btn:focus-visible,
+.ch-card .btn:focus-visible,
+.ch-card .btn-opt-test:focus-visible,
+.ch-card .btn-bessel:focus-visible,
+.ch-card .btn-qq:focus-visible,
+.ch-card .btn-anova:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .mc-num {
@@ -1802,10 +1814,11 @@ input[type="checkbox"] {
 
 .challenge-nav-bar {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  overflow-x: auto;
-  margin-bottom: 16px;
-  padding-bottom: 4px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .ch-nav-btn {
@@ -1841,6 +1854,35 @@ input[type="checkbox"] {
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   padding: 22px;
+  animation: ch-enter 0.25s ease both;
+}
+
+.ch-card .btn {
+  min-height: 42px;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.ch-card .btn-opt-test,
+.ch-card .btn-bessel,
+.ch-card .btn-qq,
+.ch-card .btn-anova {
+  min-height: 42px;
+}
+
+.ch-card .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@keyframes ch-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ch-card { animation: none; }
+  .module-chip, .ch-nav-btn { transition: none; }
 }
 
 .ch-header-row {
@@ -1942,10 +1984,15 @@ input[type="checkbox"] {
   padding: 12px 14px;
   border-radius: var(--radius-sm);
   font-size: 0.84rem;
-  line-height: 1.5;
+  line-height: 1.55;
   border: 1px solid var(--border-strong);
+  border-left-width: 4px;
   background-color: var(--bg-elevated);
   color: var(--text-primary);
+}
+
+.ch-result-banner p {
+  margin: 0;
 }
 
 .ch-result-banner.show {
