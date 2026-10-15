@@ -2,8 +2,26 @@
 /**
  * Interactive Knowledge Check Quiz Component.
  * Supports multi-question mastery checks per lesson with live scoring,
- * category badges, detailed pedagogical explanations, and reset functionality.
+ * KaTeX mathematical rendering, category badges, detailed pedagogical explanations,
+ * and smooth interactive state updates.
  */
+
+import katex from 'katex';
+
+function renderMath(latex, displayMode = false) {
+  try {
+    return katex.renderToString(latex, { throwOnError: false, displayMode });
+  } catch (e) {
+    return `<code>${latex}</code>`;
+  }
+}
+
+export function renderTextWithMath(text) {
+  if (!text) return '';
+  let formatted = text.replace(/\$\$(.+?)\$\$/g, (m, tex) => renderMath(tex, true));
+  formatted = formatted.replace(/\$(.+?)\$/g, (m, tex) => renderMath(tex, false));
+  return formatted;
+}
 
 export function renderQuiz(container, questions, videoId, onComplete = null) {
   if (!questions || questions.length === 0) {
@@ -15,7 +33,9 @@ export function renderQuiz(container, questions, videoId, onComplete = null) {
     return;
   }
 
-  const storedQuiz = JSON.parse(localStorage.getItem('statquest_quiz_progress') || '{}');
+  const storedQuiz = JSON.parse(
+    (typeof localStorage !== 'undefined' && localStorage.getItem('statquest_quiz_progress')) || '{}'
+  );
   const videoState = storedQuiz[videoId] || {};
 
   // Calculate current score
@@ -41,7 +61,7 @@ export function renderQuiz(container, questions, videoId, onComplete = null) {
     <div class="quiz-container">
       <div class="quiz-header">
         <div class="quiz-header-left">
-          <h3><i data-lucide="check-circle"></i> Knowledge Check: Test Your Intuition</h3>
+          <h3><i data-lucide="check-circle"></i> Knowledge Check: First-Principles Self-Assessment</h3>
           <div class="quiz-score-badge ${isPerfect ? 'score-perfect' : ''}">
             Score: <span id="quiz-score-num">${correctCount}</span> / ${questions.length}
           </div>
@@ -53,14 +73,16 @@ export function renderQuiz(container, questions, videoId, onComplete = null) {
         </div>
       </div>
 
-      ${isPerfect ? `
-        <div class="quiz-mastery-banner">
-          <div class="mastery-badge">BAM!</div>
-          <div class="mastery-text">
-            <strong>Mastery Achieved!</strong> You answered all ${questions.length} first-principles questions correctly.
+      <div id="quiz-mastery-slot">
+        ${isPerfect ? `
+          <div class="quiz-mastery-banner">
+            <div class="mastery-badge">BAM!</div>
+            <div class="mastery-text">
+              <strong>Mastery Achieved!</strong> You answered all ${questions.length} first-principles questions correctly.
+            </div>
           </div>
-        </div>
-      ` : ''}
+        ` : ''}
+      </div>
 
       <div class="quiz-questions-list">
         ${questions.map((q, qIdx) => {
@@ -74,7 +96,7 @@ export function renderQuiz(container, questions, videoId, onComplete = null) {
                 <span class="q-number-pill">Question ${qIdx + 1} of ${questions.length}</span>
                 <span class="q-category-tag"><i data-lucide="${cat.icon}"></i> ${cat.title}</span>
               </div>
-              <p class="question-text">${q.question}</p>
+              <p class="question-text">${renderTextWithMath(q.question)}</p>
               <div class="quiz-options">
                 ${q.options.map((opt, optIdx) => {
                   let optClass = 'quiz-option-btn';
@@ -86,13 +108,13 @@ export function renderQuiz(container, questions, videoId, onComplete = null) {
                   return `
                     <button class="${optClass}" data-optidx="${optIdx}" ${answered ? 'disabled' : ''}>
                       <span class="opt-letter">${String.fromCharCode(65 + optIdx)}</span>
-                      <span class="opt-label">${opt}</span>
+                      <span class="opt-label">${renderTextWithMath(opt)}</span>
                     </button>
                   `;
                 }).join('')}
               </div>
               <div class="quiz-explanation ${answered ? 'revealed' : ''}">
-                <p><strong>First-Principles Explanation:</strong> ${q.explanation}</p>
+                <p><strong>First-Principles Explanation:</strong> ${renderTextWithMath(q.explanation)}</p>
               </div>
             </div>
           `;
@@ -105,9 +127,11 @@ export function renderQuiz(container, questions, videoId, onComplete = null) {
   const resetBtn = container.querySelector('#btn-reset-quiz');
   if (resetBtn) {
     resetBtn.addEventListener('click', () => {
-      const allProgress = JSON.parse(localStorage.getItem('statquest_quiz_progress') || '{}');
-      delete allProgress[videoId];
-      localStorage.setItem('statquest_quiz_progress', JSON.stringify(allProgress));
+      if (typeof localStorage !== 'undefined') {
+        const allProgress = JSON.parse(localStorage.getItem('statquest_quiz_progress') || '{}');
+        delete allProgress[videoId];
+        localStorage.setItem('statquest_quiz_progress', JSON.stringify(allProgress));
+      }
       renderQuiz(container, questions, videoId, onComplete);
     });
   }
@@ -125,12 +149,14 @@ export function renderQuiz(container, questions, videoId, onComplete = null) {
         const chosen = parseInt(btn.dataset.optidx);
 
         // Update localStorage
-        const allProgress = JSON.parse(localStorage.getItem('statquest_quiz_progress') || '{}');
-        if (!allProgress[videoId]) allProgress[videoId] = {};
-        allProgress[videoId][qIdx] = chosen;
-        localStorage.setItem('statquest_quiz_progress', JSON.stringify(allProgress));
+        if (typeof localStorage !== 'undefined') {
+          const allProgress = JSON.parse(localStorage.getItem('statquest_quiz_progress') || '{}');
+          if (!allProgress[videoId]) allProgress[videoId] = {};
+          allProgress[videoId][qIdx] = chosen;
+          localStorage.setItem('statquest_quiz_progress', JSON.stringify(allProgress));
+        }
 
-        // Update button states
+        // Update button states in-place
         buttons.forEach((b, bIdx) => {
           b.disabled = true;
           if (bIdx === qData.answer) {
@@ -150,10 +176,41 @@ export function renderQuiz(container, questions, videoId, onComplete = null) {
           card.classList.add('card-incorrect');
         }
 
-        // Re-render to update score header and check mastery
-        renderQuiz(container, questions, videoId, onComplete);
+        // Update score badge in-place
+        let currentCorrect = 0;
+        let currentAnswered = 0;
+        const currentProgress = JSON.parse(
+          (typeof localStorage !== 'undefined' && localStorage.getItem('statquest_quiz_progress')) || '{}'
+        );
+        const curVideoState = currentProgress[videoId] || {};
+        questions.forEach((q, idx) => {
+          if (curVideoState[idx] !== undefined) {
+            currentAnswered++;
+            if (curVideoState[idx] === q.answer) currentCorrect++;
+          }
+        });
+
+        const scoreNum = container.querySelector('#quiz-score-num');
+        if (scoreNum) scoreNum.textContent = currentCorrect;
+
+        const masterySlot = container.querySelector('#quiz-mastery-slot');
+        if (masterySlot && currentAnswered === questions.length && currentCorrect === questions.length) {
+          const scoreBadge = container.querySelector('.quiz-score-badge');
+          if (scoreBadge) scoreBadge.classList.add('score-perfect');
+          masterySlot.innerHTML = `
+            <div class="quiz-mastery-banner">
+              <div class="mastery-badge">BAM!</div>
+              <div class="mastery-text">
+                <strong>Mastery Achieved!</strong> You answered all ${questions.length} first-principles questions correctly.
+              </div>
+            </div>
+          `;
+        }
 
         if (onComplete) onComplete(qIdx, chosen === qData.answer);
+        if (typeof window !== 'undefined' && window.lucide && window.lucide.createIcons) {
+          window.lucide.createIcons();
+        }
       });
     });
   });

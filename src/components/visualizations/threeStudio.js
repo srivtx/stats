@@ -22,6 +22,7 @@ export class ThreeStudio {
     this.currentMode = null;
     this.activeObjects = [];
     this.resizeObserver = null;
+    this.gridHelper = null;
     this.isDestroyed = false;
 
     // Pre-computed deterministic standard normal base points for cov3d morphing
@@ -41,6 +42,29 @@ export class ThreeStudio {
     }
 
     this.init();
+  }
+
+  getThemeColors(themeName) {
+    const theme = themeName || (typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme')) || 'bw-dark';
+    if (theme === 'bw-light') {
+      return { bg: 0xfcfcfc, grid1: 0xd4d4d8, grid2: 0xe4e4e7, dir2: 0x52525b };
+    } else if (theme === 'bw-contrast') {
+      return { bg: 0x000000, grid1: 0xffffff, grid2: 0x27272a, dir2: 0xffffff };
+    }
+    return { bg: 0x09090b, grid1: 0x27272a, grid2: 0x18181b, dir2: 0x71717a };
+  }
+
+  setTheme(themeName) {
+    if (!this.scene) return;
+    const colors = this.getThemeColors(themeName);
+    this.scene.background = new THREE.Color(colors.bg);
+    if (this.gridHelper) {
+      this.scene.remove(this.gridHelper);
+      if (this.gridHelper.geometry) this.gridHelper.geometry.dispose();
+      this.gridHelper = new THREE.GridHelper(24, 24, colors.grid1, colors.grid2);
+      this.gridHelper.position.y = -0.01;
+      this.scene.add(this.gridHelper);
+    }
   }
 
   isWebGLAvailable() {
@@ -80,7 +104,8 @@ export class ThreeStudio {
     try {
       // Scene
       this.scene = new THREE.Scene();
-      this.scene.background = new THREE.Color(0x0a0f1d);
+      const themeColors = this.getThemeColors();
+      this.scene.background = new THREE.Color(themeColors.bg);
 
       // Camera
       this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
@@ -107,14 +132,14 @@ export class ThreeStudio {
       dirLight1.position.set(15, 25, 20);
       this.scene.add(dirLight1);
 
-      const dirLight2 = new THREE.DirectionalLight(0x38bdf8, 0.45);
+      const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.45);
       dirLight2.position.set(-15, -10, -15);
       this.scene.add(dirLight2);
 
       // Grid floor
-      const grid = new THREE.GridHelper(24, 24, 0x1e293b, 0x0f172a);
-      grid.position.y = -0.01;
-      this.scene.add(grid);
+      this.gridHelper = new THREE.GridHelper(24, 24, themeColors.grid1, themeColors.grid2);
+      this.gridHelper.position.y = -0.01;
+      this.scene.add(this.gridHelper);
 
       // Handle Resize
       if (typeof ResizeObserver !== 'undefined') {
