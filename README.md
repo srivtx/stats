@@ -1,6 +1,6 @@
 # 📊 StatQuest: Statistics Fundamentals — Interactive 3D Masterclass
 
-[![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?style=flat&logo=vite)](https://vitejs.dev/)
+[![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=flat&logo=vite)](https://vitejs.dev/)
 [![Three.js](https://img.shields.io/badge/Three.js-WebGL-049EF4?style=flat&logo=three.js)](https://threejs.org/)
 [![KaTeX](https://img.shields.io/badge/KaTeX-LaTeX_Math-3298DC?style=flat)](https://katex.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -16,9 +16,16 @@ Every single video is paired with:
 5. **Step-by-Step Worked Numerical Walkthrough**: Exact numbers illustrating how the math works out by hand.
 6. **3D Interactive WebGL Spatial Studios**: Rotating 3D Gaussian bells, multiple regression planes, loss paraboloids, and maximum likelihood manifolds built from scratch with Three.js.
 7. **2D Simulation Labs**: Monte Carlo simulations of the Central Limit Theorem, Bessel's correction, statistical power, Q-Q plots, and bootstrapping.
-8. **Reproducible Python & R Code**: Copy-ready snippets utilizing NumPy, SciPy, Statsmodels, and base R.
+8. **Python in the Browser & R Code**: Run Python in a Pyodide (WebAssembly) sandbox or a fast local engine, with preset experiments. R snippets are copy-ready.
 9. **Knowledge Check Quizzes**: Eight questions per video (three core plus five derivation-focused), with explanations of misconceptions and traps.
-10. **Printable Cheatsheet**: Quick-reference guide covering decision matrices and formulas.
+10. **Statistical Challenges**: Eight gamified labs (least squares fitting, distribution detective, p-value estimation, test matching, power, CLT, and more) that award mastery points and a certificate.
+11. **Printable Cheatsheet**: Quick-reference guide covering decision matrices and formulas.
+
+### Themes, Navigation & Accessibility
+- **Three black-and-white themes**: B&W Dark (default), B&W Light, and High Contrast. Charts, 3D scenes, and challenges follow the active theme.
+- **Tabs**: Overview, Theory, 3D Studio, 2D Lab, Code Lab, Challenges, and Quiz. The tab bar is an ARIA tablist: use the arrow keys, Home, and End to move between tabs.
+- **Video navigation**: ← and → move to the previous or next video (not while typing in a field).
+- **Screen readers and keyboard**: labelled controls, a skip link to the lesson content, visible focus rings, and reduced-motion support.
 
 ---
 
@@ -43,6 +50,7 @@ Every single video is paired with:
 ## 🕹️ Interactive 3D & 2D Features
 
 ### 1. 3D WebGL Spatial Studio (Three.js)
+Each video opens the closest of five 3D scenes. The tab says "Closest 3D scene for this topic" when no scene is an exact match.
 - **3D Bivariate Gaussian Bell**: Dynamic $\mu_x, \mu_y, \sigma_x, \sigma_y, \rho$ sliders, color-coded elevation heatmaps, and draggable cross-section plane showing the 1D slice distribution.
 - **3D Multiple Linear Regression Plane**: Live 3D scatter cloud $(X_1, X_2, Y)$, movable regression plane with partial slopes $\beta_1$ and $\beta_2$, and vertical residual lines displaying Sum of Squared Residuals ($SSR$).
 - **3D Loss Paraboloid**: Visualizes the quadratic loss bowl $SSR(\beta_1, \beta_2)$ with an interactive ball rolling toward the global OLS minimum.
@@ -60,6 +68,20 @@ Every single video is paired with:
 - **Odds & Logit Explorer**: Interactive probability slider mapping directly onto the symmetric logit curve $\ln\left(\frac{p}{1-p}\right)$.
 - **Loess Local Regression**: Sliding window with tricube kernel weights.
 - **Bootstrap Resampler**: Step-by-step resampling with replacement and 95% percentile confidence interval generation.
+
+---
+
+## 🗂️ Content & Data Layout
+
+- `src/data/playlistData.js`: the 62 videos, with BAM intuition, summary, formulas, worked example, pitfalls, Python and R code, and three core quiz questions.
+- `src/data/theoryDerivations.js`: the module-level foundation derivations.
+- `src/data/deepContent/module-N.js`: per-video derivations (axioms, numbered steps, result, where assumptions break) and five extra quiz questions. `index.js` merges them by video index.
+- `scripts/validate_deep_content.mjs`: checks every module's structure, the quiz answer positions, duplicate questions, and that every formula renders with KaTeX.
+
+```bash
+node scripts/validate_deep_content.mjs      # all modules
+node scripts/validate_deep_content.mjs 10   # one module
+```
 
 ---
 
@@ -100,7 +122,8 @@ The compiled static bundle is located in the `dist/` directory and can be hosted
 ## 🛠️ Tech Stack & Architecture
 
 - **Frontend Runtime**: Native Modern ES Modules (ES2022)
-- **Build Engine**: [Vite 6](https://vitejs.dev/) (lightning-fast bundling, zero runtime server overhead)
+- **Build Engine**: [Vite 8](https://vitejs.dev/) (lightning-fast bundling, zero runtime server overhead)
+- **In-browser Python**: [Pyodide](https://pyodide.org/) (WebAssembly CPython) plus a local fast engine
 - **3D Graphics Engine**: [Three.js](https://threejs.org/) + OrbitControls (WebGL 2.0)
 - **Mathematical Typesetting**: [KaTeX](https://katex.org/) (fast browser-side LaTeX rendering)
 - **UI Icons**: [Lucide](https://lucide.dev/)
