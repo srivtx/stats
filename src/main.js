@@ -94,7 +94,7 @@ class StatQuestApp {
             <button class="btn btn-secondary btn-sm" id="btn-open-cheatsheet" style="flex: 1;">
               <i data-lucide="book-open"></i> Cheatsheet
             </button>
-            <a href="https://github.com/zen/stats" target="_blank" class="btn btn-ghost btn-sm" title="View Source on GitHub">
+            <a href="https://github.com/srivtx/stats" target="_blank" class="btn btn-ghost btn-sm" title="View Source on GitHub">
               <i data-lucide="github"></i>
             </a>
           </div>
