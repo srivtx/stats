@@ -550,7 +550,7 @@ class StatQuestApp {
         this.renderCodeTab(container, video);
         break;
       case 'challenges':
-        this.challengesLab = new ChallengesLab(container);
+        this.challengesLab = new ChallengesLab(container, video.moduleId);
         break;
       case 'quiz':
         this.renderQuizTab(container, video);
@@ -695,13 +695,18 @@ class StatQuestApp {
         <summary>
           <span class="section-heading"><i data-lucide="layers" aria-hidden="true"></i> Module foundation: ${escapeHtml(moduleDeriv.title)}</span>
         </summary>
+        <p class="section-lede">${this.renderTextWithMath(moduleDeriv.summary)}</p>
         <ol class="derivation-steps">
           ${moduleDeriv.steps.map(s => `
             <li class="derivation-step">
               <span class="step-num" aria-hidden="true">${s.step}</span>
               <div>
                 <h3 class="step-title">${this.renderTextWithMath(s.title)}</h3>
-                <p>${this.renderTextWithMath(s.content)}</p>
+                ${s.content.map(p => `<p>${this.renderTextWithMath(p)}</p>`).join('')}
+                <div class="numerical-box foundation-example">
+                  <span class="example-label">Worked example</span>
+                  ${s.example.map(p => `<p>${this.renderTextWithMath(p)}</p>`).join('')}
+                </div>
               </div>
             </li>
           `).join('')}

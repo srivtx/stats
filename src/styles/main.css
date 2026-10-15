@@ -1037,6 +1037,24 @@ a {
   color: var(--text-primary);
 }
 
+.foundation-example {
+  margin-top: 12px;
+}
+
+.foundation-example p + p {
+  margin-top: 8px;
+}
+
+.example-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
 .pitfall-box {
   background-color: var(--bg-main);
   border-left: 2px dashed var(--text-secondary);
@@ -1729,6 +1747,57 @@ input[type="checkbox"] {
   font-size: 0.75rem;
   color: var(--text-secondary);
   font-weight: 600;
+}
+
+.module-chip-bar {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin-bottom: 12px;
+  padding-bottom: 4px;
+}
+
+.module-chip {
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.module-chip:hover {
+  background-color: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.module-chip.active {
+  background-color: var(--text-primary);
+  color: var(--bg-main);
+  border-color: var(--text-primary);
+}
+
+.mc-num {
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+}
+
+.mc-count {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.7rem;
+  opacity: 0.75;
+}
+
+.ch-done {
+  font-weight: 700;
+  margin-left: 2px;
 }
 
 .challenge-nav-bar {

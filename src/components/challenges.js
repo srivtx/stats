@@ -1,22 +1,33 @@
 // src/components/challenges.js
 import { C } from './palette.js';
+import { modulesData } from '../data/modulesData.js';
+import {
+  normalCdf, normalQuantile, tTwoTailedP, mulberry32, gaussian, mean, variance, pearson, median
+} from './statmath.js';
 /**
- * Interactive Statistical Challenges Laboratory
- * Gamified first-principles challenges:
- * 1. OLS Regression Fitter (Least Squares RSS minimization)
- * 2. Distribution Detective (Identify distributions from sample histograms & moments)
- * 3. P-Value Estimator (Estimate p-values from test statistics)
- * 4. Research Test Selector (Match clinical study designs to appropriate statistical tests)
- * 5. Power & Sample Size Optimizer (Balance alpha, effect size, and n to reach 80% power)
- * 6. Central Limit Theorem Normality Race (Tune n until sample mean passes Gaussian normality)
- * 7. Maximum Likelihood Peak Climber (Climb the log-likelihood surface to find analytical MLE)
- * 8. False Discovery Rate (FDR) Controller (Master Benjamini-Hochberg vs Bonferroni multiple testing)
+ * Interactive Statistical Challenges Laboratory.
+ * Every challenge belongs to one module of the course, and the lab opens module by module.
  */
 
+const CATALOG = [
+  { key: 'outlier', moduleId: 'module-1', label: 'Outlier Sabotage', icon: 'bar-chart-2', done: ['outlier_breakdown'] },
+  { key: 'detective', moduleId: 'module-2', label: 'Distribution Detective', icon: 'search', done: ['detective_win'] },
+  { key: 'bessel', moduleId: 'module-3', label: "Bessel's Divisor", icon: 'divide', done: ['bessel_predict'] },
+  { key: 'clt', moduleId: 'module-4', label: 'CLT Normality Race', icon: 'shuffle', done: ['clt_master'] },
+  { key: 'pvalue', moduleId: 'module-5', label: 'P-Value Estimator', icon: 'target', done: ['p_sniper', 'p_close'] },
+  { key: 'matcher', moduleId: 'module-5', label: 'Test Matcher', icon: 'check-square', done: ['test_match'] },
+  { key: 'power', moduleId: 'module-6', label: 'Power Optimizer', icon: 'activity', done: ['power_optimal'] },
+  { key: 'fdr', moduleId: 'module-6', label: 'FDR Controller', icon: 'filter', done: ['fdr_master'] },
+  { key: 'qq', moduleId: 'module-7', label: 'Q-Q Plot Reader', icon: 'git-commit', done: ['qq_read'] },
+  { key: 'correlation', moduleId: 'module-8', label: 'Correlation Guesser', icon: 'compass', done: ['corr_guess'] },
+  { key: 'mle', moduleId: 'module-9', label: 'MLE Climber', icon: 'mountain', done: ['mle_summit'] },
+  { key: 'ols', moduleId: 'module-10', label: 'OLS Line Fitter', icon: 'trending-up', done: ['ols_perfect', 'ols_good'] },
+  { key: 'bayes', moduleId: 'module-11', label: 'Base Rate Bayes Lab', icon: 'layers', done: ['bayes_base_rate'] }
+];
+
 export class ChallengesLab {
-  constructor(container) {
+  constructor(container, moduleId = 'module-1') {
     this.container = container;
-    this.currentChallenge = 'ols';
     this.stats = JSON.parse(
       (typeof localStorage !== 'undefined' && localStorage.getItem('statquest_challenge_stats')) ||
       JSON.stringify({
@@ -25,8 +36,61 @@ export class ChallengesLab {
         attempts: {}
       })
     );
+    this.currentModule = modulesData.some(m => m.id === moduleId) ? moduleId : 'module-1';
+    this.currentChallenge = this.challengesFor(this.currentModule)[0].key;
 
     this.render();
+  }
+
+  challengesFor(moduleId) {
+    return CATALOG.filter(c => c.moduleId === moduleId);
+  }
+
+  isDone(challenge) {
+    return challenge.done.some(k => this.stats.completed[k]);
+  }
+
+  renderNav() {
+    const chipBar = this.container.querySelector('#module-chip-bar');
+    const nav = this.container.querySelector('#challenge-nav-bar');
+    if (!chipBar || !nav) return;
+
+    chipBar.innerHTML = modulesData.map(m => {
+      const list = this.challengesFor(m.id);
+      const done = list.filter(c => this.isDone(c)).length;
+      const active = m.id === this.currentModule;
+      return `
+        <button class="module-chip ${active ? 'active' : ''}" data-module="${m.id}" aria-pressed="${active}" title="${m.title}">
+          <span class="mc-num">${m.number}</span>
+          <span class="mc-title">${m.title}</span>
+          <span class="mc-count">${done}/${list.length}</span>
+        </button>
+      `;
+    }).join('');
+
+    nav.innerHTML = this.challengesFor(this.currentModule).map(c => `
+      <button class="ch-nav-btn ${c.key === this.currentChallenge ? 'active' : ''}" data-ch="${c.key}" aria-pressed="${c.key === this.currentChallenge}">
+        <i data-lucide="${c.icon}"></i> ${c.label}${this.isDone(c) ? ' <span class="ch-done" aria-label="completed">✓</span>' : ''}
+      </button>
+    `).join('');
+
+    chipBar.querySelectorAll('.module-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.currentModule = btn.dataset.module;
+        this.currentChallenge = this.challengesFor(this.currentModule)[0].key;
+        this.renderNav();
+        this.renderStage();
+      });
+    });
+
+    nav.querySelectorAll('.ch-nav-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.currentChallenge = btn.dataset.ch;
+        this.renderNav();
+        this.renderStage();
+      });
+    });
+    this.refreshIcons();
   }
 
   saveStats() {
@@ -91,33 +155,9 @@ export class ChallengesLab {
           </div>
         </div>
 
-        <!-- Challenge Navigation Pills -->
-        <div class="challenge-nav-bar">
-          <button class="ch-nav-btn ${this.currentChallenge === 'ols' ? 'active' : ''}" data-ch="ols">
-            <i data-lucide="trending-up"></i> 1. OLS Fitter
-          </button>
-          <button class="ch-nav-btn ${this.currentChallenge === 'detective' ? 'active' : ''}" data-ch="detective">
-            <i data-lucide="search"></i> 2. Distribution Detective
-          </button>
-          <button class="ch-nav-btn ${this.currentChallenge === 'pvalue' ? 'active' : ''}" data-ch="pvalue">
-            <i data-lucide="target"></i> 3. P-Value Estimator
-          </button>
-          <button class="ch-nav-btn ${this.currentChallenge === 'matcher' ? 'active' : ''}" data-ch="matcher">
-            <i data-lucide="check-square"></i> 4. Test Matcher
-          </button>
-          <button class="ch-nav-btn ${this.currentChallenge === 'power' ? 'active' : ''}" data-ch="power">
-            <i data-lucide="activity"></i> 5. Power Optimizer
-          </button>
-          <button class="ch-nav-btn ${this.currentChallenge === 'clt' ? 'active' : ''}" data-ch="clt">
-            <i data-lucide="shuffle"></i> 6. CLT Normality Race
-          </button>
-          <button class="ch-nav-btn ${this.currentChallenge === 'mle' ? 'active' : ''}" data-ch="mle">
-            <i data-lucide="mountain"></i> 7. MLE Climber
-          </button>
-          <button class="ch-nav-btn ${this.currentChallenge === 'fdr' ? 'active' : ''}" data-ch="fdr">
-            <i data-lucide="filter"></i> 8. FDR Controller
-          </button>
-        </div>
+        <!-- Module picker and the challenges inside the chosen module -->
+        <div class="module-chip-bar" id="module-chip-bar" role="group" aria-label="Choose a module"></div>
+        <div class="challenge-nav-bar" id="challenge-nav-bar" role="group" aria-label="Challenges in this module"></div>
 
         <!-- Active Challenge Sandbox -->
         <div class="challenge-stage" id="challenge-stage"></div>
@@ -127,22 +167,13 @@ export class ChallengesLab {
       </div>
     `;
 
-    // Attach nav listeners
-    this.container.querySelectorAll('.ch-nav-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        this.container.querySelectorAll('.ch-nav-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        this.currentChallenge = btn.dataset.ch;
-        this.renderStage();
-      });
-    });
-
     // Certificate button listener
     const certBtn = this.container.querySelector('#btn-view-certificate');
     if (certBtn) {
       certBtn.addEventListener('click', () => this.showCertificateModal());
     }
 
+    this.renderNav();
     this.renderStage();
     this.refreshIcons();
   }
@@ -168,11 +199,17 @@ export class ChallengesLab {
     stage.innerHTML = '';
 
     switch (this.currentChallenge) {
-      case 'ols':
-        this.renderOLSChallenge(stage);
+      case 'outlier':
+        this.renderOutlierChallenge(stage);
         break;
       case 'detective':
         this.renderDetectiveChallenge(stage);
+        break;
+      case 'bessel':
+        this.renderBesselChallenge(stage);
+        break;
+      case 'clt':
+        this.renderCLTChallenge(stage);
         break;
       case 'pvalue':
         this.renderPValueChallenge(stage);
@@ -183,14 +220,23 @@ export class ChallengesLab {
       case 'power':
         this.renderPowerChallenge(stage);
         break;
-      case 'clt':
-        this.renderCLTChallenge(stage);
+      case 'fdr':
+        this.renderFDRChallenge(stage);
+        break;
+      case 'qq':
+        this.renderQQChallenge(stage);
+        break;
+      case 'correlation':
+        this.renderCorrelationChallenge(stage);
         break;
       case 'mle':
         this.renderMLEChallenge(stage);
         break;
-      case 'fdr':
-        this.renderFDRChallenge(stage);
+      case 'ols':
+        this.renderOLSChallenge(stage);
+        break;
+      case 'bayes':
+        this.renderBayesChallenge(stage);
         break;
     }
 
@@ -225,7 +271,7 @@ export class ChallengesLab {
       <div class="ch-card">
         <div class="ch-header-row">
           <div>
-            <h3><i data-lucide="trending-up"></i> Challenge 1: The Least Squares Fitter</h3>
+            <h3><i data-lucide="trending-up"></i> The Least Squares Fitter</h3>
             <p>Adjust slope (\\(\\beta_1\\)) and intercept (\\(\\beta_0\\)) to manually minimize the Sum of Squared Residuals (RSS). Can human intuition match analytical calculus?</p>
           </div>
           <span class="ch-badge">Target: RSS &le; ${Math.round(optRSS * 1.05)}</span>
@@ -407,10 +453,10 @@ export class ChallengesLab {
   // ============================================================
   renderDetectiveChallenge(stage) {
     const distributions = [
-      { id: 'normal', name: 'Normal (Gaussian)', desc: 'Symmetric bell with zero skewness and kurtosis ~ 3' },
-      { id: 'exponential', name: 'Exponential', desc: 'Strictly positive waiting times with steep decay and right skewness' },
-      { id: 'uniform', name: 'Continuous Uniform', desc: 'Flat flat flat across domain with zero modality' },
-      { id: 'bimodal', name: 'Bimodal Mixture', desc: 'Two distinct congregations representing two subpopulations' }
+      { id: 'normal', name: 'Normal (Gaussian)', desc: 'Symmetric bell: skewness near 0 and excess kurtosis near 0' },
+      { id: 'exponential', name: 'Exponential', desc: 'Positive waiting times with a long right tail: skewness near 2' },
+      { id: 'uniform', name: 'Continuous Uniform', desc: 'Flat across its whole range: excess kurtosis near -1.2' },
+      { id: 'bimodal', name: 'Bimodal Mixture', desc: 'Two separated clumps: skewness near 0 but strongly negative excess kurtosis' }
     ];
 
     const choice = distributions[Math.floor(Math.random() * distributions.length)];
@@ -444,6 +490,7 @@ export class ChallengesLab {
     const variance = samples.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (N - 1);
     const sd = Math.sqrt(variance);
     const skewness = (samples.reduce((a, b) => a + Math.pow((b - mean) / sd, 3), 0) / N).toFixed(2);
+    const kurtosis = (samples.reduce((a, b) => a + Math.pow((b - mean) / sd, 4), 0) / N - 3).toFixed(2);
     const sorted = [...samples].sort((a, b) => a - b);
     const median = sorted[Math.floor(N / 2)].toFixed(1);
 
@@ -451,10 +498,10 @@ export class ChallengesLab {
       <div class="ch-card">
         <div class="ch-header-row">
           <div>
-            <h3><i data-lucide="search"></i> Challenge 2: The Distribution Detective</h3>
-            <p>An unknown scientific process generated N = ${N} observations. Inspect the sample histogram and sample moments to identify the distribution.</p>
+            <h3><i data-lucide="search"></i> The Distribution Detective</h3>
+            <p>An unknown scientific process generated N = ${N} observations. Inspect the sample histogram and the sample moments (skewness and excess kurtosis) to identify the distribution.</p>
           </div>
-          <span class="ch-badge">Clue: Skewness = ${skewness}</span>
+          <span class="ch-badge">Clues: skew ${skewness}, excess kurtosis ${kurtosis}</span>
         </div>
 
         <div class="ch-body-grid">
@@ -466,6 +513,7 @@ export class ChallengesLab {
               <div><strong>Sample Mean:</strong> ${mean.toFixed(1)}</div>
               <div><strong>Sample Median:</strong> ${median}</div>
               <div><strong>Sample Skewness:</strong> ${skewness}</div>
+              <div><strong>Sample Excess Kurtosis:</strong> ${kurtosis}</div>
               <div><strong>Sample Std Dev:</strong> ${sd.toFixed(1)}</div>
             </div>
 
@@ -530,7 +578,7 @@ export class ChallengesLab {
           banner.innerHTML = `<strong>BAM! Correct!</strong> The mystery distribution was indeed <strong>${choice.name}</strong>. (+40 Points). ${choice.desc}.`;
         } else {
           banner.classList.add('warn');
-          banner.innerHTML = `<strong>Incorrect identity:</strong> You guessed ${guess}, but the actual distribution was <strong>${choice.name}</strong>. Notice skewness = ${skewness}!`;
+          banner.innerHTML = `<strong>Incorrect identity:</strong> You guessed ${btn.textContent.trim()}, but the actual distribution was <strong>${choice.name}</strong>. Sample skewness = ${skewness}, excess kurtosis = ${kurtosis}. ${choice.desc}.`;
         }
       });
     });
@@ -544,19 +592,17 @@ export class ChallengesLab {
   // CHALLENGE 3: P-Value Estimator
   // ============================================================
   renderPValueChallenge(stage) {
-    const tVal = (1.5 + Math.random() * 2.5).toFixed(2);
+    const tVal = (1.5 + Math.random() * 2.0).toFixed(2);
     const df = 38;
     const t = parseFloat(tVal);
-    // Student t CDF approximation for tail area
-    const z = t * (1 - 1 / (4 * df)) / Math.sqrt(1 + (t * t) / (2 * df));
-    const tailArea = 1 / (1 + Math.exp(-0.07056 * Math.pow(z, 3) - 1.5976 * z));
-    const trueP = Math.max(0.0001, (2 * tailArea));
+    const trueP = tTwoTailedP(t, df);
+    const pAtTwo = tTwoTailedP(2, df);
 
     stage.innerHTML = `
       <div class="ch-card">
         <div class="ch-header-row">
           <div>
-            <h3><i data-lucide="target"></i> Challenge 3: P-Value Estimator</h3>
+            <h3><i data-lucide="target"></i> The P-Value Estimator</h3>
             <p>A clinical study observed a two-sample test statistic of <strong>t = ${tVal}</strong> with <strong>df = ${df}</strong>. Estimate the two-tailed p-value!</p>
           </div>
           <span class="ch-badge">Neyman-Pearson Decision</span>
@@ -569,12 +615,12 @@ export class ChallengesLab {
           <div class="ch-controls-panel">
             <div class="control-group">
               <label>Your Estimated P-Value: <span id="lbl-guess-p" class="highlight-val">0.050</span></label>
-              <input type="range" id="slider-guess-p" min="0.001" max="0.300" step="0.002" value="0.050">
+              <input type="range" id="slider-guess-p" min="0.001" max="0.300" step="0.001" value="0.050">
             </div>
 
             <div class="ch-metric-box">
               <div class="metric-label">Significance Decision at \\(\\alpha = 0.05\\)</div>
-              <div class="metric-val" id="metric-decision" style="font-size:1.1rem;">${t >= 2.0 ? 'Reject Null (Significant)' : 'Fail to Reject Null'}</div>
+              <div class="metric-val" id="metric-decision" style="font-size:1.1rem;">${trueP <= 0.05 ? 'Reject Null (Significant)' : 'Fail to Reject Null'}</div>
             </div>
 
             <button class="btn btn-primary" id="btn-submit-p" style="width:100%;">
@@ -673,7 +719,7 @@ export class ChallengesLab {
         banner.innerHTML = `<strong>Close estimate!</strong> True p-value = <strong>${trueP.toFixed(3)}</strong> (Your guess: ${guess.toFixed(3)}). (+20 Points).`;
       } else {
         banner.classList.add('warn');
-        banner.innerHTML = `<strong>Off target:</strong> True two-tailed p-value = <strong>${trueP.toFixed(3)}</strong>. Remember: t = 2.0 corresponds roughly to p = 0.045 for typical sample sizes!`;
+        banner.innerHTML = `<strong>Off target:</strong> True two-tailed p-value = <strong>${trueP.toFixed(3)}</strong>. Remember: with df = ${df}, t = 2.00 gives p = ${pAtTwo.toFixed(3)}, just above 0.05, so the exact degrees of freedom matter.`;
       }
     });
 
@@ -730,7 +776,7 @@ export class ChallengesLab {
         <div class="ch-card">
           <div class="ch-header-row">
             <div>
-              <h3><i data-lucide="check-square"></i> Challenge 4: Statistical Test Selector</h3>
+              <h3><i data-lucide="check-square"></i> Statistical Test Selector</h3>
               <p>Scenario ${currentQ + 1} of ${questions.length}: Select the most appropriate, mathematically sound statistical test.</p>
             </div>
             <span class="ch-badge">Methodology Diagnosis</span>
@@ -753,8 +799,11 @@ export class ChallengesLab {
       `;
 
       const banner = stage.querySelector('#matcher-banner');
+      let answered = false;
       stage.querySelectorAll('.btn-opt-test').forEach(btn => {
         btn.addEventListener('click', () => {
+          if (answered) return;
+          answered = true;
           const chosen = btn.dataset.opt;
           banner.className = 'ch-result-banner show';
           if (chosen === q.correct) {
@@ -770,6 +819,14 @@ export class ChallengesLab {
             if (currentQ < questions.length - 1) {
               currentQ++;
               renderQ();
+              this.refreshIcons();
+            } else {
+              banner.className = 'ch-result-banner show success';
+              banner.innerHTML = `${banner.innerHTML}<p style="margin-top:10px;"><strong>Set complete.</strong> All ${questions.length} scenarios reviewed.</p><button class="btn btn-ghost btn-sm" id="btn-matcher-restart"><i data-lucide="refresh-cw"></i> Start over</button>`;
+              banner.querySelector('#btn-matcher-restart').addEventListener('click', () => {
+                currentQ = 0;
+                renderQ();
+              });
               this.refreshIcons();
             }
           }, 3000);
@@ -789,7 +846,7 @@ export class ChallengesLab {
       <div class="ch-card">
         <div class="ch-header-row">
           <div>
-            <h3><i data-lucide="activity"></i> Challenge 5: Power & Sample Size Optimizer</h3>
+            <h3><i data-lucide="activity"></i> Power & Sample Size Optimizer</h3>
             <p>You have a research grant. To detect a small effect size (Cohen's \\(d = 0.35\\)) at \\(\\alpha = 0.05\\), tune sample size \\(n\\) to reach the gold standard <strong>80% Power (\\(1 - \\beta = 0.80\\))</strong> without exceeding budget!</p>
           </div>
           <span class="ch-badge">Grant Optimization</span>
@@ -829,14 +886,16 @@ export class ChallengesLab {
     const banner = stage.querySelector('#power-banner');
     const colors = this.getThemeColors();
 
+    const d = 0.35;
+    const twoSamplePower = (n) => {
+      const delta = d * Math.sqrt(n / 2);
+      return normalCdf(delta - 1.96) + normalCdf(-delta - 1.96);
+    };
+
     const updatePower = () => {
       const n = parseInt(slider.value);
       lblN.textContent = n;
-      const d = 0.35;
-      const delta = d * Math.sqrt(n / 2);
-      const zCrit = 1.96;
-      const zDiff = delta - zCrit;
-      const power = 1 / (1 + Math.exp(-0.07056 * Math.pow(zDiff, 3) - 1.5976 * zDiff));
+      const power = twoSamplePower(n);
       const powerPct = Math.round(Math.min(0.999, Math.max(0.05, power)) * 100);
 
       valPower.textContent = `${powerPct}%`;
@@ -867,9 +926,7 @@ export class ChallengesLab {
       ctx.lineWidth = 2.5;
       ctx.beginPath();
       for (let testN = 15; testN <= 250; testN += 5) {
-        const del = d * Math.sqrt(testN / 2);
-        const zd = del - 1.96;
-        const pwr = 1 / (1 + Math.exp(-0.07056 * Math.pow(zd, 3) - 1.5976 * zd));
+        const pwr = twoSamplePower(testN);
         const px = padL + ((testN - 15) / (250 - 15)) * w;
         const py = canvas.height - padB - Math.min(1.0, Math.max(0.05, pwr)) * h;
         if (testN === 15) ctx.moveTo(px, py);
@@ -891,9 +948,7 @@ export class ChallengesLab {
 
     stage.querySelector('#btn-submit-power').addEventListener('click', () => {
       const n = parseInt(slider.value);
-      const d = 0.35;
-      const delta = d * Math.sqrt(n / 2);
-      const power = 1 / (1 + Math.exp(-0.07056 * Math.pow(delta - 1.96, 3) - 1.5976 * (delta - 1.96)));
+      const power = twoSamplePower(n);
       banner.className = 'ch-result-banner show';
 
       if (power >= 0.80 && n <= 140) {
@@ -918,7 +973,7 @@ export class ChallengesLab {
       <div class="ch-card">
         <div class="ch-header-row">
           <div>
-            <h3><i data-lucide="shuffle"></i> Challenge 6: Central Limit Theorem Normality Race</h3>
+            <h3><i data-lucide="shuffle"></i> Central Limit Theorem Normality Race</h3>
             <p>Start with a heavily skewed, non-normal population (Exponential \\(\\lambda = 1.0\\), skewness = 2.0). Increase sample size \\(N\\) to observe how the sampling distribution of the sample mean \\(\\bar{X}_N\\) converges to a Gaussian bell curve. Achieve skewness \\(|\\gamma_1| < 0.15\\) to pass!</p>
           </div>
           <span class="ch-badge">Asymptotic Convergence</span>
@@ -931,7 +986,7 @@ export class ChallengesLab {
           <div class="ch-controls-panel">
             <div class="control-group">
               <label>Sample Size (\\(N\\)): <span id="lbl-clt-n" class="highlight-val">4</span></label>
-              <input type="range" id="slider-clt-n" min="2" max="60" step="2" value="4">
+              <input type="range" id="slider-clt-n" min="2" max="400" step="2" value="4">
             </div>
 
             <div class="ch-metric-box">
@@ -983,7 +1038,10 @@ export class ChallengesLab {
       const h = canvas.height - padB - padT;
 
       const numBins = 28;
-      const minVal = 0.2, maxVal = 2.5;
+      const mu = 1.0;
+      const se = 1.0 / Math.sqrt(N);
+      const minVal = Math.max(0, mu - 4 * se);
+      const maxVal = mu + 4 * se;
       const binW = (maxVal - minVal) / numBins;
       const counts = new Array(numBins).fill(0);
       means.forEach(m => {
@@ -1007,17 +1065,16 @@ export class ChallengesLab {
         ctx.strokeRect(x, y, pxPerBin - 2, bH);
       });
 
-      // Draw overlay theoretical normal bell
+      // Overlay the theoretical CLT normal curve, scaled to the bins
       ctx.strokeStyle = colors.success;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      const mu = 1.0;
-      const se = 1.0 / Math.sqrt(N);
-      for (let xVal = minVal; xVal <= maxVal; xVal += 0.05) {
+      for (let xVal = minVal; xVal <= maxVal + 1e-9; xVal += (maxVal - minVal) / 200) {
         const z = (xVal - mu) / se;
         const pdf = (1 / (se * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * z * z);
+        const expectedPerBin = pdf * binW * nDraws;
         const normPx = padL + ((xVal - minVal) / (maxVal - minVal)) * w;
-        const normPy = canvas.height - padB - Math.min(1.0, pdf * binW * (nDraws / maxC) * 0.9) * h;
+        const normPy = canvas.height - padB - Math.min(1, expectedPerBin / maxC) * h;
         if (xVal === minVal) ctx.moveTo(normPx, normPy);
         else ctx.lineTo(normPx, normPy);
       }
@@ -1067,7 +1124,7 @@ export class ChallengesLab {
       <div class="ch-card">
         <div class="ch-header-row">
           <div>
-            <h3><i data-lucide="mountain"></i> Challenge 7: Maximum Likelihood Peak Climber</h3>
+            <h3><i data-lucide="mountain"></i> Maximum Likelihood Peak Climber</h3>
             <p>You observed N = 15 sample data points. Adjust candidate parameters \\(\\mu\\) and \\(\\sigma\\) to climb the log-likelihood peak \\(\\ln \\mathcal{L}(\\mu, \\sigma)\\). Can you match the calculus derivation?</p>
           </div>
           <span class="ch-badge">Calculus Peak</span>
@@ -1199,7 +1256,7 @@ export class ChallengesLab {
       <div class="ch-card">
         <div class="ch-header-row">
           <div>
-            <h3><i data-lucide="filter"></i> Challenge 8: False Discovery Rate (FDR) Controller</h3>
+            <h3><i data-lucide="filter"></i> False Discovery Rate (FDR) Controller</h3>
             <p>Testing 30 biological targets simultaneously. Choose between <strong>Raw P-Value (\\(\\alpha = 0.05\\))</strong>, <strong>Bonferroni Correction</strong>, or <strong>Benjamini-Hochberg (BH) FDR</strong> to discover real signals without false positive contamination!</p>
           </div>
           <span class="ch-badge">Multiplicity Control</span>
@@ -1335,6 +1392,697 @@ export class ChallengesLab {
     });
   }
 
+  // ============================================================
+  // MODULE 1: Outlier Sabotage (mean vs median breakdown)
+  // ============================================================
+  renderOutlierChallenge(stage) {
+    const base = [32, 35, 38, 40, 41, 43, 45, 47, 50];
+    const baseMean = mean(base);
+    const baseMedian = median(base);
+    const MAX_X = 500;
+    const TARGET_MEAN = 60;
+    const MAX_MEDIAN_SHIFT = 1.5;
+
+    stage.innerHTML = `
+      <div class="ch-card">
+        <div class="ch-header-row">
+          <div>
+            <h3><i data-lucide="bar-chart-2"></i> Outlier Sabotage</h3>
+            <p>Nine households report their monthly savings (in dollars). Add a tenth household with any value you like. Your goal: push the <strong>mean to at least ${TARGET_MEAN}</strong> while the <strong>median moves by no more than ${MAX_MEDIAN_SHIFT}</strong>.</p>
+          </div>
+          <span class="ch-badge">Breakdown Point</span>
+        </div>
+
+        <div class="ch-body-grid">
+          <div class="canvas-wrap">
+            <canvas id="outlier-canvas" width="600" height="280" class="ch-canvas"></canvas>
+          </div>
+          <div class="ch-controls-panel">
+            <div class="control-group">
+              <label>New household's savings: <span id="lbl-outlier-x" class="highlight-val">40</span></label>
+              <input type="range" id="slider-outlier-x" min="0" max="${MAX_X}" step="1" value="40">
+            </div>
+            <div class="ch-metric-box">
+              <div class="metric-label">Mean of the 10 households</div>
+              <div class="metric-val" id="val-outlier-mean">--</div>
+              <div class="metric-sub" id="val-outlier-median">Median: --</div>
+              <div class="metric-sub">Before the new household: mean ${baseMean.toFixed(1)}, median ${baseMedian.toFixed(1)}</div>
+            </div>
+            <button class="btn btn-primary" id="btn-submit-outlier" style="width:100%;">
+              <i data-lucide="check"></i> Submit Household
+            </button>
+            <div id="outlier-banner" class="ch-result-banner"></div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const canvas = stage.querySelector('#outlier-canvas');
+    const ctx = canvas.getContext('2d');
+    const slider = stage.querySelector('#slider-outlier-x');
+    const lbl = stage.querySelector('#lbl-outlier-x');
+    const valMean = stage.querySelector('#val-outlier-mean');
+    const valMedian = stage.querySelector('#val-outlier-median');
+    const banner = stage.querySelector('#outlier-banner');
+    const colors = this.getThemeColors();
+    const padL = 40, padR = 30, lineY = 170;
+    const xToPx = v => padL + (v / MAX_X) * (canvas.width - padL - padR);
+
+    const draw = () => {
+      const x = parseFloat(slider.value);
+      const data = [...base, x];
+      const m = mean(data);
+      const md = median(data);
+      lbl.textContent = `$${x}`;
+      valMean.textContent = `$${m.toFixed(1)}`;
+      valMean.style.color = m >= TARGET_MEAN ? colors.success : colors.warn;
+      valMedian.textContent = `Median $${md.toFixed(1)} (moved ${(md - baseMedian).toFixed(1)})`;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = colors.grid;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(padL, lineY);
+      ctx.lineTo(canvas.width - padR, lineY);
+      ctx.stroke();
+
+      ctx.fillStyle = colors.muted;
+      ctx.font = '11px JetBrains Mono, monospace';
+      for (let v = 0; v <= MAX_X; v += 100) {
+        const px = xToPx(v);
+        ctx.beginPath();
+        ctx.moveTo(px, lineY);
+        ctx.lineTo(px, lineY + 6);
+        ctx.stroke();
+        ctx.fillText(`$${v}`, px - 10, lineY + 22);
+      }
+
+      ctx.fillStyle = colors.muted;
+      base.forEach(v => {
+        ctx.beginPath();
+        ctx.arc(xToPx(v), lineY - 14, 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.fillStyle = colors.text;
+      ctx.beginPath();
+      ctx.arc(xToPx(x), lineY - 14, 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      const marker = (v, color, dash, label, row) => {
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = 2;
+        ctx.setLineDash(dash);
+        ctx.beginPath();
+        ctx.moveTo(xToPx(v), 30 + row * 26);
+        ctx.lineTo(xToPx(v), lineY);
+        ctx.stroke();
+        ctx.restore();
+        ctx.font = '12px Inter, sans-serif';
+        ctx.fillText(`${label} $${v.toFixed(1)}`, xToPx(v) + 6, 30 + row * 26 + 4);
+      };
+      marker(md, colors.success, [6, 4], 'median', 0);
+      marker(m, colors.text, [], 'mean', 1);
+    };
+
+    slider.addEventListener('input', draw);
+    draw();
+
+    stage.querySelector('#btn-submit-outlier').addEventListener('click', () => {
+      const x = parseFloat(slider.value);
+      const data = [...base, x];
+      const m = mean(data);
+      const shift = Math.abs(median(data) - baseMedian);
+      banner.className = 'ch-result-banner show';
+      if (m >= TARGET_MEAN && shift <= MAX_MEDIAN_SHIFT) {
+        this.addScore('outlier_breakdown', 40);
+        banner.classList.add('success');
+        banner.innerHTML = `<strong>BAM!</strong> One household at $${x} lifted the mean to $${m.toFixed(1)}, but the median moved only ${shift.toFixed(1)}. The mean has a breakdown point of 0: one value can drag it anywhere. The median keeps its place until about half the data are corrupted. (+40 Points).`;
+      } else if (m < TARGET_MEAN) {
+        banner.classList.add('warn');
+        banner.innerHTML = `<strong>Mean too low:</strong> With $${x}, the mean is $${m.toFixed(1)}. The target is $${TARGET_MEAN}, so the new value must be much larger.`;
+      } else {
+        banner.classList.add('warn');
+        banner.innerHTML = `<strong>Median moved too much:</strong> The median shifted by ${shift.toFixed(1)}. A value that lands inside the middle of the data moves the median, so place the new value far above the middle.`;
+      }
+    });
+  }
+
+  // ============================================================
+  // MODULE 3: Bessel's Divisor (why we divide by n - 1)
+  // ============================================================
+  renderBesselChallenge(stage) {
+    const sigma2 = 100;
+    const n0 = 5;
+    const choices = [
+      { value: 100, label: 'About 100 (the true variance)' },
+      { value: 80, label: 'About 80' },
+      { value: 20, label: 'About 20' },
+      { value: 120, label: 'About 120' }
+    ];
+    const correctValue = ((n0 - 1) / n0) * sigma2;
+
+    const rng = mulberry32(20260416);
+    const reps = 4000;
+    const sims = {};
+    for (let n = 2; n <= 30; n++) {
+      let sumBiased = 0;
+      let sumUnbiased = 0;
+      for (let r = 0; r < reps; r++) {
+        const xs = [];
+        for (let i = 0; i < n; i++) xs.push(50 + 10 * gaussian(rng));
+        const xbar = mean(xs);
+        const ss = xs.reduce((a, b) => a + (b - xbar) * (b - xbar), 0);
+        sumBiased += ss / n;
+        sumUnbiased += ss / (n - 1);
+      }
+      sims[n] = { biased: sumBiased / reps, unbiased: sumUnbiased / reps };
+    }
+
+    stage.innerHTML = `
+      <div class="ch-card">
+        <div class="ch-header-row">
+          <div>
+            <h3><i data-lucide="divide"></i> Bessel's Divisor</h3>
+            <p>A population has true variance σ² = 100 (standard deviation 10). From a sample of n = 5 values we compute the sum of squared deviations from the sample mean. Before looking at any simulation, <strong>predict the average</strong> of the estimate when we divide that sum by n.</p>
+          </div>
+          <span class="ch-badge">Unbiased Estimation</span>
+        </div>
+
+        <div class="ch-body-grid">
+          <div class="canvas-wrap">
+            <canvas id="bessel-canvas" width="600" height="340" class="ch-canvas"></canvas>
+          </div>
+          <div class="ch-controls-panel">
+            <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:8px;">Step 1 · Predict the average of SS / n at n = 5:</label>
+            <div class="detective-options">
+              ${choices.map((c, i) => `
+                <button class="btn btn-secondary btn-bessel" data-idx="${i}" style="width:100%; text-align:left; margin-bottom:8px; justify-content:flex-start;">${c.label}</button>
+              `).join('')}
+            </div>
+            <div class="control-group">
+              <label>Step 2 · Sample size (n): <span id="lbl-bessel-n" class="highlight-val">5</span></label>
+              <input type="range" id="slider-bessel-n" min="2" max="30" step="1" value="5" disabled>
+            </div>
+            <div class="ch-stats-summary">
+              <div><strong>Average of SS / n:</strong> <span id="val-bessel-biased">--</span></div>
+              <div><strong>Average of SS / (n − 1):</strong> <span id="val-bessel-unbiased">--</span></div>
+              <div><strong>True variance σ²:</strong> ${sigma2}</div>
+            </div>
+            <div id="bessel-banner" class="ch-result-banner"></div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const canvas = stage.querySelector('#bessel-canvas');
+    const ctx = canvas.getContext('2d');
+    const slider = stage.querySelector('#slider-bessel-n');
+    const lbl = stage.querySelector('#lbl-bessel-n');
+    const valB = stage.querySelector('#val-bessel-biased');
+    const valU = stage.querySelector('#val-bessel-unbiased');
+    const banner = stage.querySelector('#bessel-banner');
+    const colors = this.getThemeColors();
+    const padL = 50, padR = 20, padT = 40, padB = 40;
+    let answered = false;
+
+    const drawPlaceholder = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = colors.muted;
+      ctx.font = '14px Inter, sans-serif';
+      ctx.fillText('Make your prediction to unlock the simulation.', padL, canvas.height / 2);
+    };
+
+    const draw = () => {
+      const n = parseInt(slider.value);
+      lbl.textContent = n;
+      const s = sims[n];
+      valB.textContent = s.biased.toFixed(1);
+      valU.textContent = s.unbiased.toFixed(1);
+
+      const w = canvas.width - padL - padR;
+      const h = canvas.height - padT - padB;
+      const mapX = k => padL + ((k - 2) / 28) * w;
+      const mapY = v => canvas.height - padB - (v / 120) * h;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = colors.grid;
+      ctx.lineWidth = 1;
+      ctx.fillStyle = colors.muted;
+      ctx.font = '11px JetBrains Mono, monospace';
+      for (let v = 0; v <= 120; v += 40) {
+        ctx.beginPath();
+        ctx.moveTo(padL, mapY(v));
+        ctx.lineTo(canvas.width - padR, mapY(v));
+        ctx.stroke();
+        ctx.fillText(String(v), 12, mapY(v) + 4);
+      }
+      ctx.fillText('n', canvas.width - padR - 8, canvas.height - 12);
+
+      ctx.save();
+      ctx.setLineDash([6, 4]);
+      ctx.strokeStyle = colors.success;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(padL, mapY(sigma2));
+      ctx.lineTo(canvas.width - padR, mapY(sigma2));
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.strokeStyle = colors.error;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let k = 2; k <= 30; k++) {
+        if (k === 2) ctx.moveTo(mapX(k), mapY(sims[k].biased));
+        else ctx.lineTo(mapX(k), mapY(sims[k].biased));
+      }
+      ctx.stroke();
+
+      ctx.save();
+      ctx.setLineDash([2, 4]);
+      ctx.strokeStyle = colors.text;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let k = 2; k <= 30; k++) {
+        if (k === 2) ctx.moveTo(mapX(k), mapY(sims[k].unbiased));
+        else ctx.lineTo(mapX(k), mapY(sims[k].unbiased));
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.fillStyle = colors.error;
+      ctx.beginPath();
+      ctx.arc(mapX(n), mapY(s.biased), 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = colors.text;
+      ctx.beginPath();
+      ctx.arc(mapX(n), mapY(s.unbiased), 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = colors.muted;
+      ctx.font = '12px Inter, sans-serif';
+      ctx.fillText('solid: divide by n    dotted: divide by n − 1    dashed: true σ² = 100', padL, 24);
+    };
+
+    drawPlaceholder();
+
+    stage.querySelectorAll('.btn-bessel').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (answered) return;
+        answered = true;
+        const choice = choices[parseInt(btn.dataset.idx)];
+        stage.querySelectorAll('.btn-bessel').forEach(b => { b.disabled = true; });
+        banner.className = 'ch-result-banner show';
+        if (choice.value === correctValue) {
+          this.addScore('bessel_predict', 45);
+          banner.classList.add('success');
+          banner.innerHTML = `<strong>BAM! Correct.</strong> At n = 5, the average of SS / n is (n − 1)/n × σ² = 4/5 × 100 = 80. Dividing by n − 1 instead removes the shortfall. (+45 Points).`;
+        } else {
+          banner.classList.add('warn');
+          banner.innerHTML = `<strong>Not quite.</strong> The average of SS / n is (n − 1)/n × σ² = 4/5 × 100 = 80, so it systematically undershoots. Use the slider to see the pattern for every n.`;
+        }
+        slider.disabled = false;
+        draw();
+      });
+    });
+
+    slider.addEventListener('input', () => {
+      if (answered) draw();
+    });
+  }
+
+  // ============================================================
+  // MODULE 7: Q-Q Plot Reader (normal, heavy-tailed, or skewed?)
+  // ============================================================
+  renderQQChallenge(stage) {
+    const shapes = [
+      { id: 'normal', name: 'Normal', note: 'The points hug the straight reference line across all quantiles, so the tails match a normal distribution.' },
+      { id: 'heavy', name: 'Heavy-tailed', note: 'S-shaped: both extremes sit farther out than a normal would produce, so the ends stretch away from the line.' },
+      { id: 'skewed', name: 'Right-skewed', note: 'Curved: the largest values rise above the line (a long upper tail), and the smallest values are compressed above it.' }
+    ];
+    const generators = {
+      normal: rng => gaussian(rng),
+      heavy: rng => {
+        const z = gaussian(rng);
+        let chi = 0;
+        for (let k = 0; k < 3; k++) {
+          const g = gaussian(rng);
+          chi += g * g;
+        }
+        return z / Math.sqrt(chi / 3);
+      },
+      skewed: rng => -Math.log(1 - rng())
+    };
+
+    const truth = shapes[Math.floor(Math.random() * shapes.length)];
+    const rng = mulberry32(Math.floor(Math.random() * 2 ** 31));
+    const n = 150;
+    const raw = Array.from({ length: n }, () => generators[truth.id](rng));
+    const m = mean(raw);
+    const s = Math.sqrt(variance(raw, 1));
+    const sorted = raw.map(x => (x - m) / s).sort((a, b) => a - b);
+    const points = sorted.map((z, i) => ({ theory: normalQuantile((i + 0.5) / n), sample: z }));
+
+    stage.innerHTML = `
+      <div class="ch-card">
+        <div class="ch-header-row">
+          <div>
+            <h3><i data-lucide="git-commit"></i> Q-Q Plot Reader</h3>
+            <p>${n} observations were drawn from one unknown distribution. The Q-Q plot compares each sorted, standardized observation (vertical axis) with the matching standard normal quantile (horizontal axis). Read the shape and name the distribution.</p>
+          </div>
+          <span class="ch-badge">Quantile Diagnostics</span>
+        </div>
+
+        <div class="ch-body-grid">
+          <div class="canvas-wrap">
+            <canvas id="qq-canvas" width="600" height="340" class="ch-canvas"></canvas>
+          </div>
+          <div class="ch-controls-panel">
+            <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:8px;">Which distribution produced this Q-Q plot?</label>
+            <div class="detective-options">
+              ${shapes.map(sh => `
+                <button class="btn btn-secondary btn-qq" data-shape="${sh.id}" style="width:100%; text-align:left; margin-bottom:8px; justify-content:flex-start;">${sh.name}</button>
+              `).join('')}
+            </div>
+            <div id="qq-banner" class="ch-result-banner"></div>
+            <button class="btn btn-ghost btn-sm" id="btn-next-qq" style="margin-top:10px;">
+              <i data-lucide="refresh-cw"></i> Draw a New Sample
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const canvas = stage.querySelector('#qq-canvas');
+    const ctx = canvas.getContext('2d');
+    const banner = stage.querySelector('#qq-banner');
+    const colors = this.getThemeColors();
+    const padL = 50, padR = 20, padT = 20, padB = 40;
+    const lim = 3.5;
+    const w = canvas.width - padL - padR;
+    const h = canvas.height - padT - padB;
+    const mapX = v => padL + ((v + lim) / (2 * lim)) * w;
+    const mapY = v => canvas.height - padB - ((v + lim) / (2 * lim)) * h;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = colors.grid;
+    ctx.lineWidth = 1;
+    for (let v = -3; v <= 3; v++) {
+      ctx.beginPath();
+      ctx.moveTo(mapX(v), padT);
+      ctx.lineTo(mapX(v), canvas.height - padB);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(padL, mapY(v));
+      ctx.lineTo(canvas.width - padR, mapY(v));
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = colors.success;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(mapX(-lim), mapY(-lim));
+    ctx.lineTo(mapX(lim), mapY(lim));
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = colors.text;
+    points.forEach(p => {
+      const px = mapX(Math.max(-lim, Math.min(lim, p.theory)));
+      const py = mapY(Math.max(-lim, Math.min(lim, p.sample)));
+      ctx.beginPath();
+      ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    ctx.fillStyle = colors.muted;
+    ctx.font = '11px JetBrains Mono, monospace';
+    ctx.fillText('theoretical normal quantile', canvas.width - padR - 170, canvas.height - 12);
+    ctx.save();
+    ctx.translate(14, padT + 170);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('sample quantile (standardized)', 0, 0);
+    ctx.restore();
+
+    let answered = false;
+    stage.querySelectorAll('.btn-qq').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (answered) return;
+        answered = true;
+        stage.querySelectorAll('.btn-qq').forEach(b => { b.disabled = true; });
+        const chosen = btn.dataset.shape;
+        banner.className = 'ch-result-banner show';
+        if (chosen === truth.id) {
+          this.addScore('qq_read', 40);
+          banner.classList.add('success');
+          banner.innerHTML = `<strong>BAM! The plot is ${truth.name}.</strong> ${truth.note} (+40 Points).`;
+        } else {
+          banner.classList.add('warn');
+          banner.innerHTML = `<strong>The true distribution was ${truth.name}.</strong> ${truth.note}`;
+        }
+      });
+    });
+
+    stage.querySelector('#btn-next-qq').addEventListener('click', () => {
+      this.renderQQChallenge(stage);
+      this.refreshIcons();
+    });
+  }
+
+  // ============================================================
+  // MODULE 8: Correlation Guesser (Pearson's r from a scatter plot)
+  // ============================================================
+  renderCorrelationChallenge(stage) {
+    const rng = mulberry32(Math.floor(Math.random() * 2 ** 31));
+    const rOptions = [-0.9, -0.7, -0.4, 0, 0.3, 0.6, 0.85];
+    const rTrue = rOptions[Math.floor(Math.random() * rOptions.length)];
+    const n = 60;
+    const xs = [];
+    const ys = [];
+    for (let i = 0; i < n; i++) {
+      const x = gaussian(rng);
+      const e = gaussian(rng);
+      xs.push(x);
+      ys.push(rTrue * x + Math.sqrt(1 - rTrue * rTrue) * e);
+    }
+    const rSample = pearson(xs, ys);
+
+    stage.innerHTML = `
+      <div class="ch-card">
+        <div class="ch-header-row">
+          <div>
+            <h3><i data-lucide="compass"></i> Correlation Guesser</h3>
+            <p>${n} paired observations are plotted below. Estimate Pearson's correlation r, which is the average product of standardized x and y values: r = Σ(xᵢ − x̄)(yᵢ − ȳ) / √[Σ(xᵢ − x̄)² Σ(yᵢ − ȳ)²]. Land within ±0.10 of the sample r.</p>
+          </div>
+          <span class="ch-badge">Pearson's r</span>
+        </div>
+
+        <div class="ch-body-grid">
+          <div class="canvas-wrap">
+            <canvas id="corr-canvas" width="600" height="340" class="ch-canvas"></canvas>
+          </div>
+          <div class="ch-controls-panel">
+            <div class="control-group">
+              <label>Your guess for r: <span id="lbl-corr-guess" class="highlight-val">0.00</span></label>
+              <input type="range" id="slider-corr-guess" min="-1" max="1" step="0.01" value="0">
+            </div>
+            <button class="btn btn-primary" id="btn-submit-corr" style="width:100%;">
+              <i data-lucide="check"></i> Submit Guess
+            </button>
+            <div id="corr-banner" class="ch-result-banner"></div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const canvas = stage.querySelector('#corr-canvas');
+    const ctx = canvas.getContext('2d');
+    const slider = stage.querySelector('#slider-corr-guess');
+    const lbl = stage.querySelector('#lbl-corr-guess');
+    const banner = stage.querySelector('#corr-banner');
+    const colors = this.getThemeColors();
+    const padL = 50, padR = 20, padT = 20, padB = 40;
+    const lim = 3.5;
+    const w = canvas.width - padL - padR;
+    const h = canvas.height - padT - padB;
+    const mapX = v => padL + ((v + lim) / (2 * lim)) * w;
+    const mapY = v => canvas.height - padB - ((v + lim) / (2 * lim)) * h;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = colors.grid;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(padL, padT, w, h);
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(mapX(0), padT);
+    ctx.lineTo(mapX(0), canvas.height - padB);
+    ctx.moveTo(padL, mapY(0));
+    ctx.lineTo(canvas.width - padR, mapY(0));
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = colors.text;
+    xs.forEach((x, i) => {
+      ctx.beginPath();
+      ctx.arc(mapX(x), mapY(ys[i]), 4, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    slider.addEventListener('input', () => {
+      lbl.textContent = parseFloat(slider.value).toFixed(2);
+    });
+
+    stage.querySelector('#btn-submit-corr').addEventListener('click', () => {
+      const guess = parseFloat(slider.value);
+      const diff = Math.abs(guess - rSample);
+      banner.className = 'ch-result-banner show';
+      if (diff <= 0.10) {
+        this.addScore('corr_guess', 40);
+        banner.classList.add('success');
+        banner.innerHTML = `<strong>BAM!</strong> The sample r is ${rSample.toFixed(2)}, and your guess was ${guess.toFixed(2)}. r is the cosine of the angle between the two centered data vectors, so r = 0 means perpendicular and |r| = 1 means collinear. (+40 Points).`;
+      } else {
+        banner.classList.add('warn');
+        banner.innerHTML = `<strong>Off by ${diff.toFixed(2)}:</strong> The sample r is ${rSample.toFixed(2)}. Look at how tightly the points follow a line and whether that line slopes up or down.`;
+      }
+    });
+  }
+
+  // ============================================================
+  // MODULE 11: Base Rate Bayes Lab (P(sick | positive))
+  // ============================================================
+  renderBayesChallenge(stage) {
+    const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+    const prev = pick([0.005, 0.01, 0.02, 0.05, 0.1]);
+    const sens = pick([0.9, 0.95, 0.99]);
+    const spec = pick([0.9, 0.95, 0.98]);
+    const exact = (sens * prev) / (sens * prev + (1 - spec) * (1 - prev));
+    const N = 10000;
+    const D = Math.round(prev * N);
+    const TP = Math.round(sens * D);
+    const FP = Math.round((1 - spec) * (N - D));
+
+    stage.innerHTML = `
+      <div class="ch-card">
+        <div class="ch-header-row">
+          <div>
+            <h3><i data-lucide="layers"></i> Base Rate Bayes Lab</h3>
+            <p>A disease affects a fraction of the population. A test has the sensitivity and specificity shown. A randomly chosen person tests <strong>positive</strong>. Before the grid is revealed, predict the probability that this person actually has the disease.</p>
+          </div>
+          <span class="ch-badge">Bayes' Theorem</span>
+        </div>
+
+        <div class="ch-body-grid">
+          <div class="canvas-wrap">
+            <canvas id="bayes-canvas" width="600" height="340" class="ch-canvas"></canvas>
+          </div>
+          <div class="ch-controls-panel">
+            <div class="ch-stats-summary">
+              <div><strong>Prevalence P(sick):</strong> ${(prev * 100).toFixed(1)}%</div>
+              <div><strong>Sensitivity P(+ | sick):</strong> ${(sens * 100).toFixed(0)}%</div>
+              <div><strong>Specificity P(− | healthy):</strong> ${(spec * 100).toFixed(0)}%</div>
+            </div>
+            <div class="control-group">
+              <label>Your prediction for P(sick | positive): <span id="lbl-bayes-guess" class="highlight-val">50%</span></label>
+              <input type="range" id="slider-bayes-guess" min="0" max="100" step="1" value="50">
+            </div>
+            <button class="btn btn-primary" id="btn-submit-bayes" style="width:100%;">
+              <i data-lucide="check"></i> Lock In Prediction
+            </button>
+            <div id="bayes-banner" class="ch-result-banner"></div>
+            <button class="btn btn-ghost btn-sm" id="btn-next-bayes" style="margin-top:10px;">
+              <i data-lucide="refresh-cw"></i> New Scenario
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const canvas = stage.querySelector('#bayes-canvas');
+    const ctx = canvas.getContext('2d');
+    const slider = stage.querySelector('#slider-bayes-guess');
+    const lbl = stage.querySelector('#lbl-bayes-guess');
+    const banner = stage.querySelector('#bayes-banner');
+    const colors = this.getThemeColors();
+
+    const drawPlaceholder = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = colors.muted;
+      ctx.font = '14px Inter, sans-serif';
+      ctx.fillText(`Imagine ${N.toLocaleString()} people. Make your prediction to reveal them.`, 20, canvas.height / 2);
+    };
+
+    const drawGrid = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const cols = 100;
+      const cell = 2.6;
+      const ox = 20;
+      const oy = 20;
+      for (let i = 0; i < N; i++) {
+        const r = Math.floor(i / cols);
+        const c = i % cols;
+        const x = ox + c * cell;
+        const y = oy + r * cell;
+        if (i < D) {
+          ctx.fillStyle = i < TP ? colors.text : colors.muted;
+        } else {
+          ctx.fillStyle = i - D < FP ? colors.warn : colors.grid;
+        }
+        ctx.fillRect(x, y, cell - 0.6, cell - 0.6);
+      }
+
+      const legendX = 320;
+      ctx.font = '13px Inter, sans-serif';
+      const rows = [
+        [colors.text, `Sick and test positive (TP): ${TP.toLocaleString()}`],
+        [colors.warn, `Healthy but test positive (FP): ${FP.toLocaleString()}`],
+        [colors.muted, `Sick but test negative (FN): ${(D - TP).toLocaleString()}`],
+        [colors.grid, `Healthy and test negative (TN): ${(N - D - FP).toLocaleString()}`]
+      ];
+      rows.forEach(([color, text], i) => {
+        ctx.fillStyle = color;
+        ctx.fillRect(legendX, 30 + i * 28, 12, 12);
+        ctx.fillStyle = colors.text;
+        ctx.fillText(text, legendX + 20, 41 + i * 28);
+      });
+      ctx.fillStyle = colors.text;
+      ctx.font = '13px JetBrains Mono, monospace';
+      ctx.fillText(`P(sick | +) = TP / (TP + FP)`, legendX, 180);
+      ctx.fillText(`= ${TP} / ${TP + FP} = ${((TP / (TP + FP)) * 100).toFixed(1)}%`, legendX, 202);
+    };
+
+    drawPlaceholder();
+
+    slider.addEventListener('input', () => {
+      lbl.textContent = `${slider.value}%`;
+    });
+
+    let answered = false;
+    stage.querySelector('#btn-submit-bayes').addEventListener('click', () => {
+      if (answered) return;
+      answered = true;
+      const guess = parseFloat(slider.value) / 100;
+      const diff = Math.abs(guess - exact);
+      drawGrid();
+      banner.className = 'ch-result-banner show';
+      const exactTxt = (exact * 100).toFixed(1);
+      if (diff <= 0.03) {
+        this.addScore('bayes_base_rate', 45);
+        banner.classList.add('success');
+        banner.innerHTML = `<strong>BAM!</strong> The true probability is ${exactTxt}%. Only ${TP} of the ${TP + FP} positives are sick; the rest of the positives are false alarms among the ${N - D} healthy people. The low base rate dominates. (+45 Points).`;
+      } else {
+        banner.classList.add('warn');
+        banner.innerHTML = `<strong>Base-rate trap:</strong> The true probability is ${exactTxt}%, not ${(guess * 100).toFixed(0)}%. Among ${TP + FP} positives, ${TP} are sick and ${FP} are healthy false alarms. Accuracy of the test alone does not set the answer; the prevalence does too.`;
+      }
+    });
+
+    stage.querySelector('#btn-next-bayes').addEventListener('click', () => {
+      this.renderBayesChallenge(stage);
+      this.refreshIcons();
+    });
+  }
+
   showCertificateModal() {
     const mount = this.container.querySelector('#certificate-modal-mount');
     if (!mount) return;
@@ -1418,6 +2166,7 @@ export class ChallengesLab {
       if (rankEl) {
         rankEl.textContent = this.getRankTitle(this.stats.score);
       }
+      this.renderNav();
     }
   }
 }
